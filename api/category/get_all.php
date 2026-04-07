@@ -11,12 +11,8 @@ if (!$company_id) {
     exit;
 }
 
-$result = mysqli_query($conn, "
-SELECT p.*, c.name as category_name 
-FROM products p
-JOIN categories c ON p.category_id = c.id
-WHERE p.company_id='$company_id' AND p.is_deleted=0
-");
+$result = mysqli_query($conn, "SELECT * FROM categories 
+WHERE company_id='$company_id' AND is_deleted=0");
 
 $data = [];
 

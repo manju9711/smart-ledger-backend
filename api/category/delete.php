@@ -13,7 +13,7 @@ if (!$id) {
     exit;
 }
 
-$sql = "UPDATE products SET is_deleted=1 WHERE id='$id'";
+$sql = "UPDATE categories SET is_deleted=1 WHERE id='$id'";
 
 if ($conn->query($sql)) {
     echo json_encode(["status"=>true,"message"=>"Deleted"]);

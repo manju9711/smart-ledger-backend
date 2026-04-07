@@ -1,54 +1,48 @@
 <?php
-
 header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Headers: Content-Type");
-header("Access-Control-Allow-Methods: POST, OPTIONS");
 
-// Handle preflight request
-if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
+include "../../config/db.php";
 
-include __DIR__ . "/../../config/db.php";
+$data = json_decode(file_get_contents("php://input"), true);
 
-// Get RAW JSON
-$input = file_get_contents("php://input");
-$data = json_decode($input, true);
+// Fields
+$name = trim($data['product_name'] ?? '');
+$category_id = intval($data['category_id'] ?? 0);
+$price = floatval($data['price'] ?? 0);
+$stock = intval($data['stock'] ?? 0);
+$barcode = $data['barcode'] ?? '';
+$unit = $data['unit'] ?? 'piece';
+$gst = floatval($data['gst_percentage'] ?? 0);
+$company_id = intval($data['company_id'] ?? 0);
 
-// Check JSON valid ah?
-if (!$data) {
-    echo json_encode(["status" => false, "message" => "Invalid JSON"]);
+// Validation
+if (!$name || !$category_id || !$company_id) {
+    echo json_encode(["status"=>false,"message"=>"Required fields missing"]);
     exit;
 }
 
-// Validate fields
-if (
-    !isset($data['product_name']) ||
-    !isset($data['price']) ||
-    !isset($data['stock']) ||
-    !isset($data['gst_percentage'])
-) {
-    echo json_encode(["status" => false, "message" => "Missing fields"]);
+// 🔥 CHECK CATEGORY EXISTS + MATCH COMPANY
+$check = mysqli_query($conn, "SELECT id FROM categories 
+WHERE id='$category_id' AND company_id='$company_id' AND is_deleted=0");
+
+if (mysqli_num_rows($check) == 0) {
+    echo json_encode([
+        "status"=>false,
+        "message"=>"Invalid category_id or company_id"
+    ]);
     exit;
 }
 
-// Assign values
-$name = $data['product_name'];
-$price = $data['price'];
-$stock = $data['stock'];
-$gst = $data['gst_percentage'];
-$barcode = isset($data['barcode']) ? $data['barcode'] : "";
-
-// Insert query
+// Insert
 $sql = "INSERT INTO products 
-(product_name, price, stock, gst_percentage, barcode) 
-VALUES ('$name', '$price', '$stock', '$gst', '$barcode')";
+(product_name, category_id, price, stock, barcode, unit, gst_percentage, company_id)
+VALUES 
+('$name','$category_id','$price','$stock','$barcode','$unit','$gst','$company_id')";
 
 if ($conn->query($sql)) {
-    echo json_encode(["status" => true, "message" => "Product Added"]);
+    echo json_encode(["status"=>true,"message"=>"Product added"]);
 } else {
-    echo json_encode(["status" => false, "message" => "Insert Failed"]);
+    echo json_encode(["status"=>false,"message"=>$conn->error]);
 }
 ?>
