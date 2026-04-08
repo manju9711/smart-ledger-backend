@@ -4,7 +4,24 @@ header("Access-Control-Allow-Origin: *");
 
 include "../../config/db.php";
 
-$company_id = $_GET['company_id'] ?? 0;
+// 🔥 SUPPORT BOTH GET + POST
+$company_id = 0;
+
+// GET
+if (isset($_GET['company_id'])) {
+    $company_id = $_GET['company_id'];
+}
+
+// POST
+if (isset($_POST['company_id'])) {
+    $company_id = $_POST['company_id'];
+}
+
+// RAW JSON (for fetch/axios)
+$input = json_decode(file_get_contents("php://input"), true);
+if (isset($input['company_id'])) {
+    $company_id = $input['company_id'];
+}
 
 if (!$company_id) {
     echo json_encode(["status"=>false,"message"=>"company_id required"]);

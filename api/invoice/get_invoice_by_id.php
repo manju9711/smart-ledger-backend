@@ -7,10 +7,22 @@ include __DIR__ . '/../../config/db.php';
 
 $invoice_no = $_GET['id'];
 
-$result = $conn->query("SELECT * FROM invoices WHERE invoice_no='$invoice_no'");
+// 🔥 JOIN COMPANY TABLE
+$result = $conn->query("
+SELECT i.*, 
+       c.company_name,
+       c.company_address,
+       c.phone,
+       c.gstin,
+       c.logo
+FROM invoices i
+LEFT JOIN companies c ON i.company_id = c.id
+WHERE i.invoice_no='$invoice_no'
+");
 
 if($result->num_rows > 0){
     $row = $result->fetch_assoc();
+
     $row['products'] = json_decode($row['products']);
 
     echo json_encode([
