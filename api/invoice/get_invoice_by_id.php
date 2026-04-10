@@ -24,6 +24,7 @@ if($result->num_rows > 0){
     $row = $result->fetch_assoc();
 
     $row['products'] = json_decode($row['products']);
+    
 
     echo json_encode([
         "status"=>true,

@@ -21,10 +21,9 @@ $gstin = $data['gstin'] ?? '';
 $phone = $data['phone'] ?? '';
 $logo = $data['logo'] ?? '';
 
-if (!$id) {
-    echo json_encode(["status"=>false,"message"=>"ID required"]);
-    exit;
-}
+// ✅ MUST BE HERE (NOT INSIDE IF)
+$owner_name = $data['owner_name'] ?? '';
+$owner_email = $data['owner_email'] ?? '';
 
 $logo_query = "";
 
@@ -47,14 +46,16 @@ mysqli_begin_transaction($conn);
 try {
 
     // ✅ COMPANY UPDATE
-    $sql = "UPDATE companies SET 
-        company_name='$company_name',
-        company_address='$company_address',
-        company_code='$company_code',
-        gstin='$gstin',
-        phone='$phone'
-        $logo_query
-        WHERE id='$id'";
+   $sql = "UPDATE companies SET 
+    company_name='$company_name',
+    company_address='$company_address',
+    company_code='$company_code',
+    gstin='$gstin',
+    phone='$phone',
+    owner_name='$owner_name',
+    owner_email='$owner_email'
+    $logo_query
+    WHERE id='$id'";
 
     if (!mysqli_query($conn, $sql)) {
         throw new Exception("Company update failed");
@@ -62,9 +63,9 @@ try {
 
     // ✅ ADMIN USER UPDATE
     $admin_sql = "UPDATE users SET 
-        name='$company_name Admin',
-        email='$company_code@admin.com'
-        WHERE company_id='$id' AND role='admin'";
+    name='$owner_name',
+    email='$owner_email'
+    WHERE company_id='$id' AND role='admin'";
 
     if (!mysqli_query($conn, $admin_sql)) {
         throw new Exception("Admin update failed");
