@@ -22,10 +22,14 @@ if (!$id) {
     exit;
 }
 
-$sql = "UPDATE categories SET is_deleted=1 WHERE id='$id'";
+// 🔥 DELETE PRODUCTS FIRST
+mysqli_query($conn, "DELETE FROM products WHERE category_id='$id'");
+
+// 🔥 THEN DELETE CATEGORY
+$sql = "DELETE FROM categories WHERE id='$id'";
 
 if ($conn->query($sql)) {
-    echo json_encode(["status"=>true,"message"=>"Deleted"]);
+    echo json_encode(["status"=>true,"message"=>"Category deleted successfully"]);
 } else {
     echo json_encode(["status"=>false,"message"=>$conn->error]);
 }

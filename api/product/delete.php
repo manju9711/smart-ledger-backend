@@ -18,15 +18,25 @@ $data = json_decode(file_get_contents("php://input"), true);
 $id = intval($data['id'] ?? 0);
 
 if (!$id) {
-    echo json_encode(["status"=>false,"message"=>"ID required"]);
+    echo json_encode([
+        "status" => false,
+        "message" => "ID required"
+    ]);
     exit;
 }
 
-$sql = "UPDATE products SET is_deleted=1 WHERE id='$id'";
+// 🔥 HARD DELETE
+$sql = "DELETE FROM products WHERE id='$id'";
 
 if ($conn->query($sql)) {
-    echo json_encode(["status"=>true,"message"=>"Deleted"]);
+    echo json_encode([
+        "status" => true,
+        "message" => "Product permanently deleted"
+    ]);
 } else {
-    echo json_encode(["status"=>false,"message"=>$conn->error]);
+    echo json_encode([
+        "status" => false,
+        "message" => $conn->error
+    ]);
 }
 ?>
