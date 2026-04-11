@@ -11,10 +11,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     exit();
 }
 
+
 include __DIR__ . '/../../config/db.php';
 
 $data = json_decode(file_get_contents("php://input"), true);
-
 $id = intval($data['id'] ?? 0);
 
 if (!$id) {
@@ -22,15 +22,37 @@ if (!$id) {
     exit;
 }
 
-// 🔥 DELETE PRODUCTS FIRST
-mysqli_query($conn, "DELETE FROM products WHERE category_id='$id'");
+mysqli_begin_transaction($conn);
 
-// 🔥 THEN DELETE CATEGORY
-$sql = "DELETE FROM categories WHERE id='$id'";
+try {
 
-if ($conn->query($sql)) {
-    echo json_encode(["status"=>true,"message"=>"Category deleted successfully"]);
-} else {
-    echo json_encode(["status"=>false,"message"=>$conn->error]);
+    // 🔥 1. DELETE PRODUCTS
+    $res1 = mysqli_query($conn, "DELETE FROM products WHERE category_id = $id");
+
+    if (!$res1) {
+        throw new Exception("Product delete failed: " . mysqli_error($conn));
+    }
+
+    // 🔥 2. DELETE CATEGORY
+    $res2 = mysqli_query($conn, "DELETE FROM categories WHERE id = $id");
+
+    if (!$res2) {
+        throw new Exception("Category delete failed: " . mysqli_error($conn));
+    }
+
+    mysqli_commit($conn);
+
+    echo json_encode([
+        "status" => true,
+        "message" => "Category + related products deleted"
+    ]);
+
+} catch (Exception $e) {
+
+    mysqli_rollback($conn);
+
+    echo json_encode([
+        "status" => false,
+        "message" => $e->getMessage()
+    ]);
 }
-?>
