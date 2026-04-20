@@ -14,7 +14,8 @@ SELECT i.*,
        c.company_address,
        c.phone,
        c.gstin,
-       c.logo
+       c.logo,
+        c.gst_type 
 FROM invoices i
 LEFT JOIN companies c ON i.company_id = c.id
 WHERE i.invoice_no='$invoice_no'

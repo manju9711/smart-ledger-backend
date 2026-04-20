@@ -1,42 +1,38 @@
 <?php
-// 🔥 CORS HEADERS
 header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 header("Access-Control-Allow-Methods: POST, OPTIONS");
 
-// 🔥 PREFLIGHT
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     http_response_code(200);
     exit();
 }
+
 include "../../config/db.php";
 
 $data = json_decode(file_get_contents("php://input"), true);
 
 $company_id = intval($data['company_id'] ?? 0);
 
-// 🔥 COMPANY VALIDATION
-$checkCompany = mysqli_query($conn, "SELECT id FROM companies WHERE id='$company_id'");
-if (mysqli_num_rows($checkCompany) == 0) {
-    echo json_encode(["status"=>false,"message"=>"Invalid company"]);
-    exit;
-}
-
-$customer_name = $data['customer_name'];
+$customer_name  = $data['customer_name'];
 $customer_phone = $data['customer_phone'];
-$products = $data['products'];
+$products       = $data['products'];
 
-$sub_total = $data['sub_total'];
-$gst_total = $data['gst_total'];
-$total_amount = $data['total_amount'];
+$sub_total   = $data['sub_total'];
+$gst_total   = $data['gst_total'];
+$total_amount= $data['total_amount'];
 
-$paid_amount = $data['paid_amount'];
+$paid_amount    = $data['paid_amount'];
 $balance_amount = $data['balance_amount'];
-$payment_method = $data['payment_method'];
+
+$payment_method = $data['payment_method']; // cash / upi / card
+$payment_type   = $data['payment_type'];   // cash / credit
+$gst_type       = $data['gst_type'];       // with_gst / without_gst
 
 $invoice_no = "INV-" . time();
 
+/* ✅ VALIDATION */
 if (!$customer_name || !preg_match('/^[0-9]{10}$/', $customer_phone)) {
     echo json_encode(["status"=>false,"message"=>"Invalid customer"]);
     exit;
@@ -47,9 +43,23 @@ if (count($products) == 0) {
     exit;
 }
 
-// 🔥 VALIDATE PRODUCTS + STOCK
-foreach ($products as $item) {
+/* ✅ GST CONTROL */
+if ($gst_type == "without_gst") {
+    $gst_total = 0;
+    $total_amount = $sub_total;
+}
 
+/* ✅ PAYMENT LOGIC */
+if ($payment_type == "credit") {
+    $paid_amount = 0;
+    $balance_amount = $total_amount;
+    $payment_status = "not_paid";
+} else {
+    $payment_status = "paid";
+}
+
+/* ✅ STOCK CHECK */
+foreach ($products as $item) {
     $product_id = intval($item['product_id']);
     $qty = floatval($item['qty']);
 
@@ -71,36 +81,34 @@ foreach ($products as $item) {
     }
 }
 
-// INSERT
+/* ✅ INSERT */
 $product_json = json_encode($products);
 
 $sql = "INSERT INTO invoices (
 invoice_no, customer_name, customer_phone, products,
 sub_total, gst_total, total_amount,
-paid_amount, balance_amount, payment_method, company_id
+paid_amount, balance_amount,
+payment_method, payment_type, gst_type, payment_status,
+company_id
 ) VALUES (
 '$invoice_no','$customer_name','$customer_phone','$product_json',
 '$sub_total','$gst_total','$total_amount',
-'$paid_amount','$balance_amount','$payment_method','$company_id'
+'$paid_amount','$balance_amount',
+'$payment_method','$payment_type','$gst_type','$payment_status',
+'$company_id'
 )";
 
 if ($conn->query($sql)) {
 
-    // 🔥 STOCK REDUCE
     foreach ($products as $item) {
         $pid = $item['product_id'];
         $qty = $item['qty'];
 
-        $conn->query("
-            UPDATE products 
-            SET stock = stock - $qty 
-            WHERE id='$pid'
-        ");
+        $conn->query("UPDATE products SET stock = stock - $qty WHERE id='$pid'");
     }
 
     echo json_encode([
         "status"=>true,
-        "message"=>"Invoice Created",
         "invoice_no"=>$invoice_no
     ]);
 
