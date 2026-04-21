@@ -58,6 +58,13 @@ if ($payment_type == "credit") {
     $payment_status = "paid";
 }
 
+/* ✅ DUE DATE LOGIC */
+if ($payment_type == "credit") {
+    $due_date = date('Y-m-d', strtotime('+30 days'));
+} else {
+    $due_date = NULL;
+}
+
 /* ✅ STOCK CHECK */
 foreach ($products as $item) {
     $product_id = intval($item['product_id']);
@@ -89,13 +96,14 @@ invoice_no, customer_name, customer_phone, products,
 sub_total, gst_total, total_amount,
 paid_amount, balance_amount,
 payment_method, payment_type, gst_type, payment_status,
-company_id
+company_id,due_date
 ) VALUES (
 '$invoice_no','$customer_name','$customer_phone','$product_json',
 '$sub_total','$gst_total','$total_amount',
 '$paid_amount','$balance_amount',
 '$payment_method','$payment_type','$gst_type','$payment_status',
-'$company_id'
+'$company_id',
+" . ($due_date ? "'$due_date'" : "NULL") . "
 )";
 
 if ($conn->query($sql)) {

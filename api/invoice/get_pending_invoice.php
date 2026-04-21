@@ -11,14 +11,18 @@ $data = json_decode(file_get_contents("php://input"), true);
 $company_id = intval($data['company_id'] ?? 0);
 
 if (!$company_id) {
-    echo json_encode(["status"=>false,"message"=>"company_id required"]);
+    echo json_encode([
+        "status"=>false,
+        "message"=>"company_id required"
+    ]);
     exit;
 }
 
+// ✅ ONLY REAL PENDING
 $result = $conn->query("
 SELECT * FROM invoices 
 WHERE company_id='$company_id' 
-AND payment_status='not_paid'
+AND balance_amount > 0
 ORDER BY id DESC
 ");
 
