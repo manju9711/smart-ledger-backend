@@ -16,7 +16,7 @@ if (!$company_id || strlen($q) < 2) {
 }
 
 $result = $conn->query("
-    SELECT id, name, phone, address, type, gst_no
+    SELECT id, name, phone, address, type, credit_enabled, credit_limit
     FROM customers
     WHERE company_id = '$company_id'
       AND is_deleted = 0

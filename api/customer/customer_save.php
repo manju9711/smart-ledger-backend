@@ -13,7 +13,6 @@ $name        = trim($conn->real_escape_string($data['name'] ?? ''));
 $phone       = trim($conn->real_escape_string($data['phone'] ?? ''));
 $address     = trim($conn->real_escape_string($data['address'] ?? ''));
 $type        = trim($conn->real_escape_string($data['type'] ?? 'retail'));
-$gst_no      = trim($conn->real_escape_string($data['gst_no'] ?? ''));
 
 /* ── Validation ── */
 if (!$company_id || !$name || !preg_match('/^[0-9]{10}$/', $phone)) {
@@ -38,7 +37,6 @@ if ($check && $check->num_rows > 0) {
             name    = '$name',
             address = '$address',
             type    = '$type',
-            gst_no  = '$gst_no'
         WHERE id = '$customer_id'
     ");
 
@@ -50,8 +48,8 @@ if ($check && $check->num_rows > 0) {
 } else {
     /* Insert new customer */
     $sql = "
-        INSERT INTO customers (company_id, name, phone, address, type, gst_no, created_at)
-        VALUES ('$company_id', '$name', '$phone', '$address', '$type', '$gst_no', NOW())
+        INSERT INTO customers (company_id, name, phone, address, type, created_at)
+        VALUES ('$company_id', '$name', '$phone', '$address', '$type', NOW())
     ";
 
     if ($conn->query($sql)) {
