@@ -169,6 +169,22 @@ if ($conn->query($sql)) {
         ");
     }
 
+    /* ── Loyalty Points ── */
+    if ($payment_type != "credit") {
+
+        // ₹100 = 1 point
+        $points = floor($total_amount / 100);
+
+        if ($points > 0 && $customer_id > 0) {
+            $conn->query("
+                UPDATE customers 
+                SET loyalty_points = loyalty_points + $points 
+                WHERE id = '$customer_id'
+            ");
+        }
+    }
+
+   //  FINAL RESPONSE
     echo json_encode([
         "status"     => true,
         "invoice_no" => $invoice_no,
