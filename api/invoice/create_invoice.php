@@ -56,7 +56,7 @@ if ($gst_type == "without_gst") {
 if ($payment_type == "credit") {
     $paid_amount    = 0;
     $balance_amount = $total_amount;
-    $payment_status = "pending";
+    $payment_status = "not_paid";
 } else {
     if ($balance_amount > 0) {
         $payment_status = "partial";
