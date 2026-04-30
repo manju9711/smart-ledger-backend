@@ -65,10 +65,29 @@ if ($payment_type == "credit") {
     }
 }
 
-/* ── DUE DATE ── */
-$due_date = ($payment_type == "credit")
-    ? date('Y-m-d', strtotime('+30 days'))
-    : NULL;
+/* ── DUE DATE (DYNAMIC) ── */
+$due_date = NULL;
+
+if ($payment_type == "credit") {
+
+    // 🔹 Fetch credit days from settings
+    $res = $conn->query("
+        SELECT default_credit_days 
+        FROM credit_settings 
+        WHERE company_id='$company_id'
+        LIMIT 1
+    ");
+
+    if ($res && $res->num_rows > 0) {
+        $row = $res->fetch_assoc();
+        $credit_days = intval($row['default_credit_days']);
+    } else {
+        $credit_days = 30; // fallback
+    }
+
+    // 🔹 Calculate due date
+    $due_date = date('Y-m-d', strtotime("+$credit_days days"));
+}
 
 /* ── STOCK CHECK ── */
 foreach ($products as $item) {
