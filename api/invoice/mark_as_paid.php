@@ -40,6 +40,15 @@ WHERE invoice_no='$invoice_no'
 
 if ($conn->query($sql)) {
 
+ $conn->query("
+        UPDATE payments
+        SET
+            payment_status='paid',
+            paid_amount = total_amount,
+            balance_amount = 0
+        WHERE invoice_no='$invoice_no'
+    ");
+
     echo json_encode([
         "status"=>true,
         "message"=>"Payment updated successfully"
