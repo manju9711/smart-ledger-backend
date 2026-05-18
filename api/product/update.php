@@ -17,6 +17,7 @@ $data = json_decode(file_get_contents("php://input"), true);
 
 $id = intval($data['id'] ?? 0);
 $name = trim($data['product_name'] ?? '');
+$product_code = trim($data['product_code'] ?? '');
 $category_id = intval($data['category_id'] ?? 0);
 $price = floatval($data['price'] ?? 0);
 $stock = intval($data['stock'] ?? 0);
@@ -41,6 +42,7 @@ if (mysqli_num_rows($check) == 0) {
 
 $sql = "UPDATE products SET
 product_name='$name',
+product_code='$product_code',
 category_id='$category_id',
 price='$price',
 stock='$stock',

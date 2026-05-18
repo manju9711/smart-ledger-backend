@@ -17,6 +17,7 @@ $data = json_decode(file_get_contents("php://input"), true);
 
 // Fields
 $name = trim($data['product_name'] ?? '');
+$product_code = trim($data['product_code'] ?? '');
 $category_id = intval($data['category_id'] ?? 0);
 $price = floatval($data['price'] ?? 0);
 $stock = intval($data['stock'] ?? 0);
@@ -45,9 +46,9 @@ if (mysqli_num_rows($check) == 0) {
 
 // Insert
 $sql = "INSERT INTO products 
-(product_name, category_id, price, stock, barcode, unit, gst_percentage, company_id)
+(product_name, product_code, category_id, price, stock, barcode, unit, gst_percentage, company_id)
 VALUES 
-('$name','$category_id','$price','$stock','$barcode','$unit','$gst','$company_id')";
+('$name', '$product_code','$category_id','$price','$stock','$barcode','$unit','$gst','$company_id')";
 
 if ($conn->query($sql)) {
     echo json_encode(["status"=>true,"message"=>"Product added"]);
