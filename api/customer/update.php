@@ -19,6 +19,7 @@ $address = $conn->real_escape_string($data['address']);
 $type = $conn->real_escape_string($data['type']);
 $credit_enabled = intval($data['credit_enabled']);
 $credit_limit = floatval($data['credit_limit']);
+$credit_days = intval($data['credit_days']);
 
 $sql = "
 UPDATE customers SET
@@ -27,7 +28,8 @@ phone='$phone',
 address='$address',
 type='$type',
 credit_enabled='$credit_enabled',
-credit_limit='$credit_limit'
+credit_limit='$credit_limit',
+credit_days='$credit_days'
 WHERE id='$id'
 ";
 

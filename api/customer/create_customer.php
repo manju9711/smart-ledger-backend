@@ -19,6 +19,7 @@ $address = $conn->real_escape_string($data['address']);
 $type = $conn->real_escape_string($data['type']);
 $credit_enabled = intval($data['credit_enabled']);
 $credit_limit = floatval($data['credit_limit']);
+$credit_days = intval($data['credit_days']);
 
 if (!$name || !preg_match('/^[0-9]{10}$/', $phone)) {
     echo json_encode(["status"=>false,"message"=>"Invalid data"]);
@@ -26,9 +27,11 @@ if (!$name || !preg_match('/^[0-9]{10}$/', $phone)) {
 }
 
 $sql = "INSERT INTO customers 
-(company_id,name,phone,address,type,credit_enabled,credit_limit,created_at)
-VALUES ('$company_id','$name','$phone','$address','$type','$credit_enabled','$credit_limit',NOW())";
+(company_id,name,phone,address,type,credit_enabled,credit_limit,credit_days,created_at)
+VALUES ('$company_id','$name','$phone','$address','$type','$credit_enabled','$credit_limit','$credit_days',NOW())";
 
 echo json_encode([
     "status"=>$conn->query($sql)
 ]);
+
+

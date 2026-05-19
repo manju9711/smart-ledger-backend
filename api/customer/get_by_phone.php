@@ -43,7 +43,8 @@ $sql = "
         type,
         gst_no,
         credit_enabled,
-        credit_limit
+        credit_limit,
+        credit_days
     FROM customers
     WHERE company_id = '$company_id'
       AND phone = '$phone'

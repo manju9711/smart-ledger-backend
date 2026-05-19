@@ -48,8 +48,28 @@ if ($check && $check->num_rows > 0) {
 } else {
     /* Insert new customer */
     $sql = "
-        INSERT INTO customers (company_id, name, phone, address, type, created_at)
-        VALUES ('$company_id', '$name', '$phone', '$address', '$type', NOW())
+       INSERT INTO customers (
+company_id,
+name,
+phone,
+address,
+type,
+credit_enabled,
+credit_limit,
+credit_days,
+created_at
+)
+       VALUES (
+'$company_id',
+'$name',
+'$phone',
+'$address',
+'$type',
+0,
+0,
+0,
+NOW()
+)
     ";
 
     if ($conn->query($sql)) {
