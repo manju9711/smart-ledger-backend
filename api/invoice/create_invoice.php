@@ -18,6 +18,7 @@ $company_id     = intval($data['company_id'] ?? 0);
 $customer_id    = intval($data['customer_id'] ?? 0);
 $customer_name  = $conn->real_escape_string($data['customer_name'] ?? '');
 $customer_phone = $conn->real_escape_string($data['customer_phone'] ?? '');
+$cashier_id = intval($data['cashier_id'] ?? 0);
 $products       = $data['products'] ?? [];
 
 $sub_total      = floatval($data['sub_total'] ?? 0);
@@ -120,13 +121,13 @@ $gst_no_sql      = $gst_no ? "'$gst_no'" : "NULL";
 
 $sql = "
 INSERT INTO invoices (
-    invoice_no, customer_id, customer_name, customer_phone,
+    invoice_no, customer_id, customer_name, customer_phone,cashier_id,
     products, sub_total, gst_total, total_amount,
     paid_amount, balance_amount,
     payment_method, payment_type, gst_type, gst_no,
     payment_status, company_id, due_date
 ) VALUES (
-    '$invoice_no', $customer_id_sql, '$customer_name', '$customer_phone',
+    '$invoice_no', $customer_id_sql, '$customer_name', '$customer_phone','$cashier_id',
     '$product_json', '$sub_total', '$gst_total', '$total_amount',
     '$paid_amount', '$balance_amount',
     '$payment_method', '$payment_type', '$gst_type', $gst_no_sql,

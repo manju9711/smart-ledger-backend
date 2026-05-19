@@ -20,9 +20,14 @@ if (!$company_id) {
 
 // ✅ FILTER BY COMPANY
 $result = $conn->query("
-SELECT * FROM invoices 
-WHERE company_id = '$company_id'
-ORDER BY id DESC
+SELECT 
+    i.*,
+    u.name as cashier_name
+FROM invoices i
+LEFT JOIN users u 
+ON i.cashier_id = u.id
+WHERE i.company_id='$company_id'
+ORDER BY i.id DESC
 ");
 
 $rows = [];
