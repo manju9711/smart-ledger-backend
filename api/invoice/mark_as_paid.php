@@ -113,7 +113,7 @@ WHERE invoice_no='$invoice_no'
 
 // ✅ RESPONSE
 
-$message = "Payment Updated Successfully ✅";
+$message = "Payment Updated Successfully";
 
 if ($return_amount > 0) {
 
