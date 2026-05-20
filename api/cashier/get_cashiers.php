@@ -16,7 +16,7 @@ include __DIR__ . '/../../config/db.php';
 $data = json_decode(file_get_contents("php://input"), true);
 $company_id = $data['company_id'];
 
-$sql = "SELECT id,name,email FROM users 
+$sql = "SELECT id,name,email,status FROM users 
         WHERE role='cashier' AND company_id='$company_id'";
 
 $res = $conn->query($sql);
