@@ -1,7 +1,7 @@
 <?php
-header("Content-Type: application/json");
+
 header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Headers: Content-Type, Authorization");
+header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Methods: POST, OPTIONS");
 
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
@@ -9,212 +9,322 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     exit();
 }
 
+header("Content-Type: application/json");
+
 include "../../config/db.php";
 
 $data = json_decode(file_get_contents("php://input"), true);
 
-/* ── INPUTS ── */
-$company_id     = intval($data['company_id'] ?? 0);
-$customer_id    = intval($data['customer_id'] ?? 0);
-$customer_name  = $conn->real_escape_string($data['customer_name'] ?? '');
-$customer_phone = $conn->real_escape_string($data['customer_phone'] ?? '');
-$cashier_id = intval($data['cashier_id'] ?? 0);
-$products       = $data['products'] ?? [];
+$conn->begin_transaction();
 
-$sub_total      = floatval($data['sub_total'] ?? 0);
-$gst_total      = floatval($data['gst_total'] ?? 0);
-$total_amount   = floatval($data['total_amount'] ?? 0);
+try {
 
-$paid_amount    = floatval($data['paid_amount'] ?? 0);
-$balance_amount = floatval($data['balance_amount'] ?? 0);
+    /*
+    ============================================
+    GET DATA
+    ============================================
+    */
 
-$payment_method = $conn->real_escape_string($data['payment_method'] ?? 'cash');
-$payment_type   = $conn->real_escape_string($data['payment_type'] ?? 'cash');
+    $company_id     = intval($data['company_id']);
+    $customer_id    = intval($data['customer_id']);
+    $cashier_id     = intval($data['cashier_id']);
 
-$gst_type       = $conn->real_escape_string($data['gst_type'] ?? 'without_gst');
-$gst_no         = $conn->real_escape_string($data['gst_no'] ?? '');
+    $customer_name  = $conn->real_escape_string($data['customer_name']);
+    $customer_phone = $conn->real_escape_string($data['customer_phone']);
 
-$invoice_no = "INV-" . time();
+    $products       = $data['products'];
 
-/* ── VALIDATION ── */
-if (!$customer_name || !preg_match('/^[0-9]{10}$/', $customer_phone)) {
-    echo json_encode(["status" => false, "message" => "Invalid customer"]);
-    exit;
-}
+    $sub_total      = floatval($data['sub_total']);
+    $gst_total      = floatval($data['gst_total']);
+    $total_amount   = floatval($data['total_amount']);
 
-if (count($products) == 0) {
-    echo json_encode(["status" => false, "message" => "No products"]);
-    exit;
-}
+    $paid_amount    = floatval($data['paid_amount']);
 
-/* ── GST CONTROL ── */
-if ($gst_type == "without_gst") {
-    $gst_total    = 0;
-    $total_amount = $sub_total;
-}
+    $payment_method = $conn->real_escape_string($data['payment_method']);
+    $payment_type   = $conn->real_escape_string($data['payment_type']);
 
-/* ── PAYMENT LOGIC ── */
-if ($payment_type == "credit") {
-    $paid_amount    = 0;
-    $balance_amount = $total_amount;
-    $payment_status = "not_paid";
-} else {
-    if ($balance_amount > 0) {
+    $gst_type       = $conn->real_escape_string($data['gst_type']);
+    $gst_no         = $conn->real_escape_string($data['gst_no']);
+
+    /*
+    ============================================
+    GET CUSTOMER BALANCE
+    ============================================
+    */
+
+    $getCustomer = $conn->query("
+        SELECT advance_balance, pending_amount
+        FROM customers
+        WHERE id = '$customer_id'
+    ");
+
+    if (!$getCustomer || $getCustomer->num_rows == 0) {
+        throw new Exception("Customer not found");
+    }
+
+    $customerData = $getCustomer->fetch_assoc();
+
+    $currentAdvance = floatval($customerData['advance_balance']);
+    $currentPending = floatval($customerData['pending_amount']);
+
+    /*
+    ============================================
+    APPLY ADVANCE BALANCE
+    ============================================
+    */
+
+    $advanceUsed = min($currentAdvance, $total_amount);
+
+    $cashNeeded = $total_amount - $advanceUsed;
+
+    /*
+    ============================================
+    CALCULATE EXTRA / PENDING
+    ============================================
+    */
+
+    $extraAmount   = 0;
+    $pendingAmount = 0;
+
+    if ($payment_method != "credit") {
+
+        if ($paid_amount > $cashNeeded) {
+
+            $extraAmount = $paid_amount - $cashNeeded;
+
+        } else if ($paid_amount < $cashNeeded) {
+
+            $pendingAmount = $cashNeeded - $paid_amount;
+        }
+
+    } else {
+
+        // Full amount pending for credit sale
+        $pendingAmount = $total_amount;
+        $advanceUsed   = 0;
+    }
+
+    /*
+    ============================================
+    FINAL CUSTOMER BALANCE
+    ============================================
+    */
+
+    $newAdvance =
+        ($currentAdvance - $advanceUsed) + $extraAmount;
+
+    $newPending =
+        $currentPending + $pendingAmount;
+
+    /*
+    ============================================
+    GENERATE INVOICE NUMBER
+    ============================================
+    */
+
+    $invoice_no = "INV" . time();
+
+    /*
+    ============================================
+    PAYMENT STATUS
+    ============================================
+    */
+
+    $payment_status = "paid";
+
+    if ($pendingAmount > 0) {
         $payment_status = "partial";
-    } else {
-        $payment_status = "paid";
-    }
-}
-
-/* ── DUE DATE (DYNAMIC) ── */
-$due_date = NULL;
-
-if ($payment_type == "credit") {
-
-    // 🔹 Fetch credit days from settings
-    $res = $conn->query("
-        SELECT default_credit_days 
-        FROM credit_settings 
-        WHERE company_id='$company_id'
-        LIMIT 1
-    ");
-
-    if ($res && $res->num_rows > 0) {
-        $row = $res->fetch_assoc();
-        $credit_days = intval($row['default_credit_days']);
-    } else {
-        $credit_days = 30; // fallback
     }
 
-    // 🔹 Calculate due date
-    $due_date = date('Y-m-d', strtotime("+$credit_days days"));
-}
-
-/* ── STOCK CHECK ── */
-foreach ($products as $item) {
-    $product_id = intval($item['product_id']);
-    $qty        = floatval($item['qty']);
-
-    $check = $conn->query("
-        SELECT stock FROM products
-        WHERE id='$product_id' AND company_id='$company_id' AND is_deleted=0
-    ");
-
-    if ($check->num_rows == 0) {
-        echo json_encode(["status" => false, "message" => "Invalid product"]);
-        exit;
+    if ($payment_method == "credit") {
+        $payment_status = "unpaid";
     }
 
-    $row = $check->fetch_assoc();
+    /*
+    ============================================
+    INSERT INVOICE
+    ============================================
+    */
 
-    if ($row['stock'] < $qty) {
-        echo json_encode(["status" => false, "message" => "Stock not enough"]);
-        exit;
+    $invoiceSql = "
+        INSERT INTO invoices
+        (
+            invoice_no,
+            company_id,
+            customer_id,
+            customer_name,
+            customer_phone,
+            cashier_id,
+
+            sub_total,
+            gst_total,
+            total_amount,
+
+            paid_amount,
+            advance_used,
+            extra_amount,
+            pending_amount,
+
+            payment_method,
+            payment_type,
+            payment_status,
+
+            gst_type,
+            gst_no,
+
+            created_at
+        )
+        VALUES
+        (
+            '$invoice_no',
+            '$company_id',
+            '$customer_id',
+            '$customer_name',
+            '$customer_phone',
+            '$cashier_id',
+
+            '$sub_total',
+            '$gst_total',
+            '$total_amount',
+
+            '$paid_amount',
+            '$advanceUsed',
+            '$extraAmount',
+            '$pendingAmount',
+
+            '$payment_method',
+            '$payment_type',
+            '$payment_status',
+
+            '$gst_type',
+            '$gst_no',
+
+            NOW()
+        )
+    ";
+
+    if (!$conn->query($invoiceSql)) {
+        throw new Exception($conn->error);
     }
-}
-
-/* ── INSERT INVOICE ── */
-$product_json    = $conn->real_escape_string(json_encode($products));
-$customer_id_sql = $customer_id > 0 ? $customer_id : "NULL";
-$due_date_sql    = $due_date ? "'$due_date'" : "NULL";
-$gst_no_sql      = $gst_no ? "'$gst_no'" : "NULL";
-
-$sql = "
-INSERT INTO invoices (
-    invoice_no, customer_id, customer_name, customer_phone,cashier_id,
-    products, sub_total, gst_total, total_amount,
-    paid_amount, balance_amount,
-    payment_method, payment_type, gst_type, gst_no,
-    payment_status, company_id, due_date
-) VALUES (
-    '$invoice_no', $customer_id_sql, '$customer_name', '$customer_phone','$cashier_id',
-    '$product_json', '$sub_total', '$gst_total', '$total_amount',
-    '$paid_amount', '$balance_amount',
-    '$payment_method', '$payment_type', '$gst_type', $gst_no_sql,
-    '$payment_status', '$company_id', $due_date_sql
-)";
-
-/* ── EXECUTE ── */
-if ($conn->query($sql)) {
 
     $invoice_id = $conn->insert_id;
 
-    /* ── INSERT PAYMENT ── */
-    $pay_sql = "
-    INSERT INTO payments (
-        company_id,
-        invoice_id,
-        invoice_no,
-        customer_id,
-        total_amount,
-        paid_amount,
-        balance_amount,
-        payment_method,
-        payment_status,
-        notes,
-        created_at,
-        updated_at
-    ) VALUES (
-        '$company_id',
-        '$invoice_id',
-        '$invoice_no',
-        $customer_id_sql,
-        '$total_amount',
-        '$paid_amount',
-        '$balance_amount',
-        '$payment_method',
-        '$payment_status',
-        '',
-        NOW(),
-        NOW()
-    )";
+    /*
+    ============================================
+    INSERT PRODUCTS
+    ============================================
+    */
 
-    if (!$conn->query($pay_sql)) {
-        echo json_encode([
-            "status" => false,
-            "message" => "Payment insert failed: " . $conn->error
-        ]);
-        exit;
-    }
+    foreach ($products as $p) {
 
-    /* ── DEDUCT STOCK ── */
-    foreach ($products as $item) {
-        $pid = intval($item['product_id']);
-        $qty = floatval($item['qty']);
+        $product_id = intval($p['product_id']);
+        $qty        = floatval($p['qty']);
+        $price      = floatval($p['price']);
+        $gst        = floatval($p['gst']);
 
-        $conn->query("
-            UPDATE products 
-            SET stock = stock - $qty 
-            WHERE id='$pid'
-        ");
-    }
+        $baseAmount = $price * $qty;
 
-    /* ── Loyalty Points ── */
-    if ($payment_type != "credit") {
+        $gstAmount =
+            $gst_type == "with_gst"
+                ? ($baseAmount * $gst) / 100
+                : 0;
 
-        // ₹100 = 1 point
-        $points = floor($total_amount / 100);
+        $rowTotal = $baseAmount + $gstAmount;
 
-        if ($points > 0 && $customer_id > 0) {
-            $conn->query("
-                UPDATE customers 
-                SET loyalty_points = loyalty_points + $points 
-                WHERE id = '$customer_id'
-            ");
+        /*
+        INSERT ITEM
+        */
+
+        $itemSql = "
+            INSERT INTO invoice_items
+            (
+                invoice_id,
+                product_id,
+                qty,
+                price,
+                gst_percentage,
+                gst_amount,
+                total_amount
+            )
+            VALUES
+            (
+                '$invoice_id',
+                '$product_id',
+                '$qty',
+                '$price',
+                '$gst',
+                '$gstAmount',
+                '$rowTotal'
+            )
+        ";
+
+        if (!$conn->query($itemSql)) {
+            throw new Exception($conn->error);
+        }
+
+        /*
+        UPDATE STOCK
+        */
+
+        $stockSql = "
+            UPDATE products
+            SET stock = stock - $qty
+            WHERE id = '$product_id'
+        ";
+
+        if (!$conn->query($stockSql)) {
+            throw new Exception($conn->error);
         }
     }
 
-   //  FINAL RESPONSE
+    /*
+    ============================================
+    UPDATE CUSTOMER BALANCE
+    ============================================
+    */
+
+    $updateCustomer = "
+        UPDATE customers
+        SET
+            advance_balance = '$newAdvance',
+            pending_amount = '$newPending'
+        WHERE id = '$customer_id'
+    ";
+
+    if (!$conn->query($updateCustomer)) {
+        throw new Exception($conn->error);
+    }
+
+    /*
+    ============================================
+    COMMIT
+    ============================================
+    */
+
+    $conn->commit();
+
     echo json_encode([
-        "status"     => true,
-        "invoice_no" => $invoice_no,
-        "invoice_id" => $invoice_id
+        "status"          => true,
+        "invoice_id"      => $invoice_id,
+        "invoice_no"      => $invoice_no,
+
+        "advance_used"    => $advanceUsed,
+        "extra_amount"    => $extraAmount,
+        "pending_amount"  => $pendingAmount,
+
+        "new_advance"     => $newAdvance,
+        "new_pending"     => $newPending,
+
+        "message"         => "Invoice created successfully"
     ]);
 
-} else {
+} catch (Exception $e) {
+
+    $conn->rollback();
+
     echo json_encode([
-        "status" => false,
-        "message" => $conn->error
+        "status"  => false,
+        "message" => $e->getMessage()
     ]);
 }
 ?>
