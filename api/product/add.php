@@ -34,7 +34,7 @@ if (!$name || !$category_id || !$company_id) {
 
 // 🔥 CHECK CATEGORY EXISTS + MATCH COMPANY
 $check = mysqli_query($conn, "SELECT id FROM categories 
-WHERE id='$category_id' AND company_id='$company_id' AND is_deleted=0" AND status='active');
+WHERE id='$category_id' AND company_id='$company_id' AND is_deleted=0 AND status='active'" );
 
 if (mysqli_num_rows($check) == 0) {
     echo json_encode([
