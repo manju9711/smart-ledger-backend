@@ -20,7 +20,35 @@ $company_code    = trim($data['company_code'] ?? '');
 $gstin           = strtoupper(trim($data['gstin'] ?? ''));
 $gst_type        = $data['gst_type'] ?? 'with_gst';
 $phone           = trim($data['phone'] ?? '');
-$logo            = $data['logo'] ?? '';
+$logo = $data['logo'] ?? '';
+
+$db_path = '';
+
+if (!empty($logo)) {
+
+    $image = base64_decode($logo);
+
+    if ($image !== false) {
+
+        $upload_dir = __DIR__ . "/../uploads/";
+
+        if (!is_dir($upload_dir)) {
+            mkdir($upload_dir, 0777, true);
+        }
+
+        $file_name = time() . ".png";
+
+        $full_path = $upload_dir . $file_name;
+
+        if (file_put_contents($full_path, $image)) {
+
+            $db_path = "uploads/" . $file_name;
+
+        }
+
+    }
+
+}
 
 $owner_name     = trim($data['owner_name'] ?? '');
 $owner_email    = trim($data['owner_email'] ?? '');
@@ -78,7 +106,7 @@ $insertCompany = mysqli_query($conn, "
     INSERT INTO companies 
     (company_name, company_code, company_address, gstin, gst_type, phone, logo, owner_name, owner_email, owner_password)
     VALUES 
-    ('$company_name','$company_code','$company_address','$gstin','$gst_type','$phone','$logo','$owner_name','$owner_email','$hashed_password')
+    ('$company_name','$company_code','$company_address','$gstin','$gst_type','$phone','$db_path','$owner_name','$owner_email','$hashed_password')
 ");
 
 if (!$insertCompany) {
