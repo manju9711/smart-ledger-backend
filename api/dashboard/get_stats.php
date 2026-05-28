@@ -28,6 +28,7 @@ $productQuery = $conn->query("
     SELECT COUNT(*) as total_products 
     FROM products 
     WHERE is_deleted = 0 AND company_id = '$company_id'
+    AND status = 'active'
 ");
 $totalProducts = $productQuery->fetch_assoc()['total_products'];
 
