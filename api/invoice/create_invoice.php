@@ -89,19 +89,48 @@ if ($payment_type == "credit") {
     }
 }
 
-/* ── DUE DATE (credit only) ── */
-$due_date = NULL;
-if ($payment_type == "credit") {
-    $res = $conn->query("
-        SELECT default_credit_days FROM credit_settings
-        WHERE company_id='$company_id' LIMIT 1
-    ");
-    $credit_days = ($res && $res->num_rows > 0)
-        ? intval($res->fetch_assoc()['default_credit_days'])
-        : 30;
-    $due_date = date('Y-m-d', strtotime("+$credit_days days"));
-}
+/* ── DUE DATE (CUSTOMER CREDIT DAYS) ── */
 
+$due_date = NULL;
+
+if ($payment_type == "credit") {
+
+    $credit_days = 0;
+
+    // 🔥 GET CUSTOMER CREDIT DAYS
+
+    $creditQry = $conn->query("
+        SELECT credit_days
+        FROM customers
+        WHERE id='$customer_id'
+        AND company_id='$company_id'
+        LIMIT 1
+    ");
+
+    if ($creditQry && $creditQry->num_rows > 0) {
+
+        $creditData = $creditQry->fetch_assoc();
+
+        $credit_days = intval($creditData['credit_days']);
+
+    }
+
+    // 🔥 DEFAULT 0 DAYS → TODAY
+
+    if ($credit_days > 0) {
+
+        $due_date = date(
+            'Y-m-d',
+            strtotime("+$credit_days days")
+        );
+
+    } else {
+
+        $due_date = date('Y-m-d');
+
+    }
+
+}
 /* ── STOCK CHECK ── */
 foreach ($products as $item) {
     $product_id = intval($item['product_id']);
