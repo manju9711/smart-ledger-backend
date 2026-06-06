@@ -25,6 +25,27 @@ if($result->num_rows > 0){
     $row = $result->fetch_assoc();
 
     $row['products'] = json_decode($row['products']);
+    $pending_total = 0;
+
+if (!empty($row['customer_id'])) {
+
+    $pendingQry = $conn->query("
+        SELECT SUM(balance_amount) AS total_pending
+        FROM invoices
+        WHERE customer_id = '{$row['customer_id']}'
+        AND balance_amount > 0
+    ");
+
+    if ($pendingQry && $pendingQry->num_rows > 0) {
+        $pending_total = floatval(
+            $pendingQry->fetch_assoc()['total_pending']
+        );
+    }
+}
+
+$row['total_pending'] = $pending_total;
+
+    
     
 
     echo json_encode([

@@ -149,6 +149,28 @@ foreach ($products as $item) {
         exit;
     }
 }
+$previous_balance = 0;
+
+if ($customer_id > 0) {
+
+    $balQry = $conn->query("
+        SELECT COALESCE(SUM(balance_amount),0) AS total_pending
+        FROM invoices
+        WHERE customer_id='$customer_id'
+        AND balance_amount > 0
+    ");
+
+    if ($balQry && $balQry->num_rows > 0) {
+        $previous_balance = floatval(
+            $balQry->fetch_assoc()['total_pending']
+        );
+    }
+}
+
+$current_balance = $previous_balance + $balance_amount;
+
+
+$current_balance = $previous_balance + $balance_amount;
 
 /* ── INSERT INVOICE ── */
 $product_json    = $conn->real_escape_string(json_encode($products));
@@ -160,13 +182,13 @@ $sql = "
 INSERT INTO invoices (
     invoice_no, customer_id, customer_name, customer_phone, cashier_id,
     products, sub_total, gst_total, total_amount,
-    paid_amount, balance_amount,
+    paid_amount, balance_amount, previous_balance,current_balance,
     payment_method, payment_type, gst_type, gst_no,
     payment_status, company_id, due_date
 ) VALUES (
     '$invoice_no', $customer_id_sql, '$customer_name', '$customer_phone', '$cashier_id',
     '$product_json', '$sub_total', '$gst_total', '$total_amount',
-    '$final_paid', '$balance_amount',
+    '$final_paid', '$balance_amount','$previous_balance','$current_balance',
     '$payment_method', '$payment_type', '$gst_type', $gst_no_sql,
     '$payment_status', '$company_id', $due_date_sql
 )";
@@ -232,7 +254,7 @@ if ($customer_id > 0) {
     ── */
   /* ── UPDATE CUSTOMER PENDING AMOUNT ── */
 
-$total_pending = $balance_amount;
+$total_pending = $current_balance;
 
 $conn->query("
     UPDATE customers
