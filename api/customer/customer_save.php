@@ -15,7 +15,7 @@ $address     = trim($conn->real_escape_string($data['address'] ?? ''));
 $type        = trim($conn->real_escape_string($data['type'] ?? 'retail'));
 
 /* ── Validation ── */
-if (!$company_id || !$name || !preg_match('/^[0-9]{10}$/', $phone)) {
+if (!$company_id || !preg_match('/^[0-9]{10}$/', $phone)) {
     echo json_encode(["status" => false, "message" => "Invalid customer data"]);
     exit;
 }
