@@ -14,16 +14,18 @@ $data = json_decode(
 
 $invoice_no = $data['invoice_no'] ?? '';
 
-$url = "https://graph.facebook.com/v23.0/<WHATSAPP_BUSINESS_PHONE_NUMBER_ID>/messages";
+$url = "https://graph.facebook.com/v23.0/859187723481196/messages";
+
+$access_token = "EAAjPuWO18b0BRwGHlQLG0C8GBuKPs3wDkJQKCHQmbGhJ4tlR6uLqq6DKmgBJ8CkHtOmy9PCXWOVMZBop1ui2lkzoyG6V81rSOcl2fOyXPApAT11MWUXGhPEkNDAvAMig3iH4lbsGqNU9a4ZCrqDs4f0rRIXAKZBzz7M5yjUSZBUg9V4K9M2KjxUZCxMXhnul5AtbxIcoDIIvstyvCrHHDTyAZCfz7Irm0kaSLlrnu3Lc8wvHt4dmmybdNJZAGej73VVIoR0wbNzYDXkMANlAyaBor0G";
 
 $headers = [
-    "Authorization: Bearer <ACCESS_TOKEN>",
+    "Authorization: Bearer " . $access_token,
     "Content-Type: application/json"
 ];
 
 $body = [
     "messaging_product" => "whatsapp",
-    "to" => "<WHATSAPP_USER_PHONE_NUMBER>",
+    "to" => "918754768231",
     "type" => "template",
     "template" => [
         "name" => "hello_world",
