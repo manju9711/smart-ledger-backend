@@ -1,29 +1,43 @@
 <?php
 
+header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Methods: POST, OPTIONS");
 
-// Handle preflight request
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     http_response_code(200);
     exit();
 }
-// DB include
-include __DIR__ . '/../../config/db.php';
 
+include "../../config/db.php";
 
-$sql = "SELECT * FROM companies WHERE is_deleted = 0";
-$result = $conn->query($sql);
+$data = json_decode(file_get_contents("php://input"), true);
 
-$data = [];
+$admin_id = intval($data['admin_id'] ?? 0);
 
-while ($row = $result->fetch_assoc()) {
-    $data[] = $row;
+$sql = "
+
+SELECT *
+
+FROM companies
+
+WHERE is_deleted = 0
+AND admin_id='$admin_id'
+
+ORDER BY id DESC
+
+";
+
+$res = mysqli_query($conn, $sql);
+
+$list = [];
+
+while($row = mysqli_fetch_assoc($res)){
+    $list[] = $row;
 }
 
 echo json_encode([
-    "status" => true,
-    "data" => $data
+    "status"=>true,
+    "data"=>$list
 ]);
-?>
