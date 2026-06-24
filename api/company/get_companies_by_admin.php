@@ -5,15 +5,13 @@ header("Access-Control-Allow-Origin: *");
 
 include "../../config/db.php";
 
-$company_id = intval($_GET['company_id'] ?? 0);
+$admin_id = intval($_GET['admin_id'] ?? 0);
 
-if($company_id <= 0){
-
+if(!$admin_id){
     echo json_encode([
-        "status" => true,
-        "data" => []
+        "status"=>false,
+        "message"=>"Admin ID required"
     ]);
-
     exit;
 }
 
@@ -21,12 +19,10 @@ $result = mysqli_query($conn, "
 
     SELECT
         id,
-        name,
-        status
-    FROM categories
-    WHERE company_id='$company_id'
-    AND is_deleted=0
-    ORDER BY id DESC
+        company_name
+    FROM companies
+    WHERE admin_id='$admin_id'
+    ORDER BY company_name ASC
 
 ");
 
