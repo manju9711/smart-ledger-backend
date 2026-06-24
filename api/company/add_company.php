@@ -13,6 +13,8 @@ include __DIR__ . '/../../config/db.php';
 
 $data = json_decode(file_get_contents("php://input"), true);
 
+$admin_id = intval($data['admin_id'] ?? 0);
+
 // 🔥 GET DATA
 $company_name    = trim($data['company_name'] ?? '');
 $company_address = trim($data['company_address'] ?? '');
@@ -50,9 +52,7 @@ if (!empty($logo)) {
 
 }
 
-$owner_name     = trim($data['owner_name'] ?? '');
-$owner_email    = trim($data['owner_email'] ?? '');
-$owner_password = $data['owner_password'] ?? '';
+
 
 // 🔥 VALIDATION
 $emailRegex = "/^[^\s@]+@[^\s@]+\.[^\s@]+$/";
@@ -76,38 +76,87 @@ if (!preg_match($phoneRegex, $phone)) {
     exit();
 }
 
-if (!$owner_name) {
-    echo json_encode(["status"=>false,"message"=>"Owner name required"]);
-    exit();
-}
 
-if (!preg_match($emailRegex, $owner_email)) {
-    echo json_encode(["status"=>false,"message"=>"Invalid email"]);
-    exit();
-}
 
-if (strlen($owner_password) < 6) {
-    echo json_encode(["status"=>false,"message"=>"Password min 6 chars"]);
-    exit();
-}
 
-// 🔥 CHECK DUPLICATE EMAIL (users table)
-$check = mysqli_query($conn, "SELECT id FROM users WHERE email='$owner_email'");
-if (mysqli_num_rows($check) > 0) {
-    echo json_encode(["status"=>false,"message"=>"Email already exists"]);
-    exit();
-}
 
-// 🔥 HASH PASSWORD
-$hashed_password = password_hash($owner_password, PASSWORD_DEFAULT);
+
+if ($admin_id > 0) {
+
+    $countQ = mysqli_query($conn,"
+        SELECT COUNT(*) total
+        FROM companies
+        WHERE admin_id='$admin_id'
+    ");
+
+    $countRow = mysqli_fetch_assoc($countQ);
+
+    if ($countRow['total'] >= 3) {
+
+        mysqli_query($conn,"
+
+            INSERT INTO company_requests
+            (
+                admin_id,
+                company_name,
+                company_code,
+                company_address,
+                gstin,
+                gst_type,
+                phone,
+                logo
+            )
+
+            VALUES
+            (
+                '$admin_id',
+                '$company_name',
+                '$company_code',
+                '$company_address',
+                '$gstin',
+                '$gst_type',
+                '$phone',
+                '$logo'
+            )
+
+        ");
+
+        echo json_encode([
+            "status" => false,
+            "request_sent" => true,
+            "message" =>
+            "Maximum 3 companies reached. Request sent to Super Admin."
+        ]);
+
+        exit;
+    }
+}
 
 // 🔥 INSERT INTO COMPANIES (MATCH DB 🔥)
 $insertCompany = mysqli_query($conn, "
-    INSERT INTO companies 
-    (company_name, company_code, company_address, gstin, gst_type, phone, logo, owner_name, owner_email, owner_password)
-    VALUES 
-    ('$company_name','$company_code','$company_address','$gstin','$gst_type','$phone','$db_path','$owner_name','$owner_email','$hashed_password')
-");
+   INSERT INTO companies
+(
+ admin_id,
+ company_name,
+ company_code,
+ company_address,
+ gstin,
+ gst_type,
+ phone,
+ logo
+)
+VALUES
+(
+ '$admin_id',
+ '$company_name',
+ '$company_code',
+ '$company_address',
+ '$gstin',
+ '$gst_type',
+ '$phone',
+ '$db_path'
+)
+ ");
 
 if (!$insertCompany) {
     echo json_encode([
@@ -120,24 +169,14 @@ if (!$insertCompany) {
 
 $company_id = mysqli_insert_id($conn);
 
-// 🔥 INSERT INTO USERS TABLE ALSO
-$insertUser = mysqli_query($conn, "
-    INSERT INTO users (name, email, password, role, company_id)
-    VALUES ('$owner_name','$owner_email','$hashed_password','admin','$company_id')
-");
 
-if (!$insertUser) {
-    echo json_encode([
-        "status" => false,
-        "message" => "User insert failed",
-        "error" => mysqli_error($conn)
-    ]);
-    exit();
-}
+
+
+
 
 // ✅ SUCCESS
 echo json_encode([
     "status" => true,
-    "message" => "Company & Admin created successfully"
+    "message" => "Company created successfully"
 ]);
 exit();
