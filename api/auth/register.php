@@ -18,7 +18,7 @@ $name       = $data['name'] ?? '';
 $email      = $data['email'] ?? '';
 $password   = $data['password'] ?? '';
 $role       = $data['role'] ?? '';
-$company_id = intval($data['company_id'] ?? 0);
+$admin_id = intval($data['admin_id'] ?? 0);
 $requested_by = intval($data['requested_by'] ?? 0);
 
 if (!$name || !$email || !$password || !$role) {
@@ -41,11 +41,11 @@ if (!in_array($role, ['superadmin','cashier','admin'])) {
     exit;
 }
 
-if (($role == 'cashier' || $role == 'admin') && !$company_id) {
+if ($role == 'cashier' && !$admin_id) {
 
     echo json_encode([
         "status"=>false,
-        "message"=>"Company ID required"
+        "message"=>"Admin ID required"
     ]);
 
     exit;
@@ -74,10 +74,8 @@ if ($role == 'cashier') {
     $countRes = mysqli_query($conn, "
 
         SELECT COUNT(*) as total
-
         FROM users
-
-        WHERE company_id='$company_id'
+        WHERE admin_id='$admin_id'
         AND role='cashier'
 
     ");
@@ -92,18 +90,18 @@ if ($role == 'cashier') {
 
         mysqli_query($conn, "
 
-            INSERT INTO cashier_requests
-            (
-                company_id,
-                requested_by,
-                name,
-                email,
-                password
-            )
+           INSERT INTO cashier_requests
+(
+    admin_id,
+    requested_by,
+    name,
+    email,
+    password
+)
 
             VALUES
             (
-                '$company_id',
+               '$admin_id',
                 '$requested_by',
                 '$name',
                 '$email',
@@ -131,24 +129,22 @@ try {
 
     $sql = "
 
-        INSERT INTO users
-        (
-            name,
-            email,
-            password,
-            role,
-            company_id
-        )
-
-        VALUES
-        (
-            '$name',
-            '$email',
-            '$hashed',
-            '$role',
-            '$company_id'
-        )
-
+       INSERT INTO users
+(
+    name,
+    email,
+    password,
+    role,
+    admin_id
+)
+VALUES
+(
+    '$name',
+    '$email',
+    '$hashed',
+    '$role',
+    '$admin_id'
+)
     ";
 
     if (!mysqli_query($conn, $sql)) {

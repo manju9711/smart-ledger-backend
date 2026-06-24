@@ -24,9 +24,7 @@ $gst_type        = $data['gst_type'] ?? 'with_gst';
 $phone           = trim($data['phone'] ?? '');
 $logo            = $data['logo'] ?? '';
 
-$owner_name     = trim($data['owner_name'] ?? '');
-$owner_email    = trim($data['owner_email'] ?? '');
-$owner_password = $data['owner_password'] ?? '';
+
 
 // ============================
 // 🔥 VALIDATION
@@ -60,29 +58,9 @@ if (!preg_match($phoneRegex, $phone)) {
     exit();
 }
 
-// Owner validation
-if (!$owner_name) {
-    echo json_encode(["status"=>false,"message"=>"Owner name required"]);
-    exit();
-}
 
-if (!preg_match($emailRegex, $owner_email)) {
-    echo json_encode(["status"=>false,"message"=>"Invalid email"]);
-    exit();
-}
 
-// 🔥 EMAIL DUPLICATE CHECK (exclude current company)
-$check = mysqli_query($conn, "SELECT id FROM users WHERE email='$owner_email' AND company_id != '$id'");
-if (mysqli_num_rows($check) > 0) {
-    echo json_encode(["status"=>false,"message"=>"Email already exists"]);
-    exit();
-}
 
-// 🔥 PASSWORD OPTIONAL
-if (!empty($owner_password) && strlen($owner_password) < 6) {
-    echo json_encode(["status"=>false,"message"=>"Password must be at least 6 characters"]);
-    exit();
-}
 
 // ============================
 // 🔥 IMAGE UPLOAD
@@ -130,9 +108,7 @@ try {
         company_code='$company_code',
         gstin='$gstin',
         gst_type='$gst_type',
-        phone='$phone',
-        owner_name='$owner_name',
-        owner_email='$owner_email'
+        phone='$phone'
         $logo_query
         WHERE id='$id'";
 
@@ -140,27 +116,9 @@ try {
         throw new Exception("Company update failed");
     }
 
-    // ✅ UPDATE ADMIN USER
-    $admin_sql = "UPDATE users SET 
-        name='$owner_name',
-        email='$owner_email'
-        WHERE company_id='$id' AND role='admin'";
+    
 
-    if (!mysqli_query($conn, $admin_sql)) {
-        throw new Exception("Admin update failed");
-    }
-
-    // ✅ UPDATE PASSWORD (OPTIONAL)
-    if (!empty($owner_password)) {
-        $hashed = password_hash($owner_password, PASSWORD_DEFAULT);
-
-        $pass_sql = "UPDATE users SET password='$hashed' 
-        WHERE company_id='$id' AND role='admin'";
-
-        if (!mysqli_query($conn, $pass_sql)) {
-            throw new Exception("Password update failed");
-        }
-    }
+   
 
     mysqli_commit($conn);
 

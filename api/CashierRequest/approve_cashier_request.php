@@ -57,7 +57,7 @@ INSERT INTO users
     email,
     password,
     role,
-    company_id
+    admin_id
 )
 
 VALUES
@@ -66,7 +66,7 @@ VALUES
     '".$request['email']."',
     '".$request['password']."',
     'cashier',
-    '".$request['company_id']."'
+    '".$request['admin_id']."'
 )
 
 ");
