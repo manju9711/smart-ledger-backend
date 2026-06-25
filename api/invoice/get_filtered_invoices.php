@@ -63,26 +63,21 @@ if ($payment_method && $payment_method !== 'all') {
 }
 
 /* Payment Status */
-if ($payment_status && $payment_status !== 'all') {
+if ($payment_status == 'paid') {
+    $where .= " AND i.balance_amount = 0";
 
-    if ($payment_status == 'paid') {
+} elseif ($payment_status == 'not_paid') {
+    $where .= " AND i.paid_amount = 0 AND i.balance_amount > 0
+                AND (i.due_date IS NULL OR i.due_date >= CURDATE())";
 
-        $where .= " AND i.balance_amount = 0";
+} elseif ($payment_status == 'pending') {
+    // partial payment, not yet overdue
+    $where .= " AND i.paid_amount > 0 AND i.balance_amount > 0
+                AND (i.due_date IS NULL OR i.due_date >= CURDATE())";
 
-    } elseif ($payment_status == 'not_paid') {
-
-        $where .= "
-            AND i.paid_amount = 0
-            AND i.balance_amount > 0
-        ";
-
-    } elseif ($payment_status == 'overdue') {
-
-        $where .= "
-            AND i.paid_amount > 0
-            AND i.balance_amount > 0
-        ";
-    }
+} elseif ($payment_status == 'overdue') {
+    // due_date passed, still has balance
+    $where .= " AND i.balance_amount > 0 AND i.due_date < CURDATE()";
 }
 
 /* Customer Name */
@@ -130,18 +125,27 @@ while ($row = $result->fetch_assoc()) {
 
     /* Auto Status Logic */
 
-    if (floatval($row['balance_amount']) == 0) {
+/* Auto Status Logic */
+if (floatval($row['balance_amount']) == 0) {
+    $row['payment_status'] = 'paid';
 
-        $row['payment_status'] = 'paid';
-
-    } elseif (floatval($row['paid_amount']) == 0) {
-
-        $row['payment_status'] = 'not_paid';
-
-    } else {
-
+} elseif (floatval($row['paid_amount']) == 0) {
+    // Nothing paid at all
+    // Check if due_date passed → overdue, else not_paid
+    if (!empty($row['due_date']) && $row['due_date'] < date('Y-m-d')) {
         $row['payment_status'] = 'overdue';
+    } else {
+        $row['payment_status'] = 'not_paid';
     }
+
+} else {
+    // Half paid (partial) → check due_date
+    if (!empty($row['due_date']) && $row['due_date'] < date('Y-m-d')) {
+        $row['payment_status'] = 'overdue';
+    } else {
+        $row['payment_status'] = 'pending'; // ← partial payment, not yet overdue
+    }
+}
 
     $row['products'] = json_decode(
         $row['products'] ?? '[]',
