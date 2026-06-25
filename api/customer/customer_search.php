@@ -1,37 +1,37 @@
 <?php
-header("Content-Type: application/json");
+ini_set('display_errors', 0);
+error_reporting(0);
+
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
-header("Access-Control-Allow-Methods: GET, OPTIONS");
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+header("Content-Type: application/json");
+
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') { http_response_code(200); exit(); }
 
 include "../../config/db.php";
 
-$company_id = intval($_GET['company_id'] ?? 0);
-$q          = trim($conn->real_escape_string($_GET['q'] ?? ''));
+$admin_id = intval($_GET['admin_id'] ?? 0);
+$q        = $conn->real_escape_string($_GET['q'] ?? '');
 
-if (!$company_id || strlen($q) < 2) {
-    echo json_encode(["status" => false, "message" => "Invalid params"]);
+if (!$admin_id) {
+    echo json_encode(["status" => false, "message" => "Admin ID required"]);
     exit;
 }
 
-$result = $conn->query("
-    SELECT id, name, phone, address, gst_no,type, credit_enabled, credit_limit, credit_days, loyalty_points
+$res = $conn->query("
+    SELECT id, name, phone, gst_no, credit_enabled, credit_limit,
+           loyalty_points, advance_balance, pending_amount
     FROM customers
-    WHERE company_id = '$company_id'
+    WHERE admin_id = '$admin_id'
       AND is_deleted = 0
       AND (name LIKE '%$q%' OR phone LIKE '%$q%')
     ORDER BY name ASC
     LIMIT 10
 ");
 
-$customers = [];
-while ($row = $result->fetch_assoc()) {
-    $customers[] = $row;
-}
+$data = [];
+while ($row = $res->fetch_assoc()) $data[] = $row;
 
-echo json_encode([
-    "status" => true,
-    "data"   => $customers
-]);
+echo json_encode(["status" => true, "data" => $data]);
 ?>

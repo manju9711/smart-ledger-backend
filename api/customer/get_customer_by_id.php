@@ -1,32 +1,35 @@
 <?php
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Headers: Content-Type");
-header("Access-Control-Allow-Methods: POST, OPTIONS");
+ini_set('display_errors', 0);
+error_reporting(0);
 
-if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+header("Content-Type: application/json");
+
+if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') { http_response_code(200); exit(); }
 
 include "../../config/db.php";
 
 $data = json_decode(file_get_contents("php://input"), true);
-$id = intval($data['id']);
+$id   = intval($data['id'] ?? 0);
 
-$sql = "
-SELECT
-    c.*,
-    co.gstin as company_gstin
-FROM customers c
-LEFT JOIN companies co
-    ON c.company_id = co.id
-WHERE c.id = '$id'
-LIMIT 1
-";
+if (!$id) {
+    echo json_encode(["status" => false, "message" => "ID required"]);
+    exit;
+}
 
-$res = $conn->query($sql);
+$res = $conn->query("
+    SELECT c.*
+    FROM customers c
+    WHERE c.id = '$id'
+    LIMIT 1
+");
 
-echo json_encode([
-    "status" => true,
-    "data" => $res->fetch_assoc()
-]);
+if ($res->num_rows === 0) {
+    echo json_encode(["status" => false, "message" => "Not found"]);
+    exit;
+}
+
+echo json_encode(["status" => true, "data" => $res->fetch_assoc()]);
+?>

@@ -1,73 +1,38 @@
 <?php
-header("Content-Type: application/json");
+ini_set('display_errors', 0);
+error_reporting(0);
+
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
-header("Access-Control-Allow-Methods: GET, OPTIONS");
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+header("Content-Type: application/json");
 
-if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
+if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') { http_response_code(200); exit(); }
 
 include "../../config/db.php";
 
-/* ===========================
-   INPUTS
-=========================== */
+$admin_id = intval($_GET['admin_id'] ?? 0);
+$phone    = $conn->real_escape_string($_GET['phone'] ?? '');
 
-$company_id = intval($_GET['company_id'] ?? 0);
-$phone      = trim($conn->real_escape_string($_GET['phone'] ?? ''));
-
-/* ===========================
-   VALIDATION
-=========================== */
-
-if (!$company_id || !preg_match('/^[0-9]{10}$/', $phone)) {
-    echo json_encode([
-        "status" => false,
-        "message" => "Invalid input"
-    ]);
+if (!$admin_id || !$phone) {
+    echo json_encode(["status" => false, "message" => "Admin ID and phone required"]);
     exit;
 }
 
-/* ===========================
-   FETCH CUSTOMER
-=========================== */
-
-$sql = "
-    SELECT 
-        id,
-        name,
-        phone,
-        address,
-        type,
-        gst_no,
-        credit_enabled,
-        credit_limit,
-        credit_days
+$res = $conn->query("
+    SELECT id, name, phone, gst_no, credit_enabled, credit_limit,
+           loyalty_points, advance_balance, pending_amount
     FROM customers
-    WHERE company_id = '$company_id'
+    WHERE admin_id = '$admin_id'
       AND phone = '$phone'
       AND is_deleted = 0
     LIMIT 1
-";
+");
 
-$result = $conn->query($sql);
-
-if ($result && $result->num_rows > 0) {
-
-    $customer = $result->fetch_assoc();
-
-    echo json_encode([
-        "status" => true,
-        "data"   => $customer
-    ]);
-
-} else {
-
-    echo json_encode([
-        "status" => false,
-        "message" => "Customer not found"
-    ]);
+if ($res->num_rows === 0) {
+    echo json_encode(["status" => false]);
+    exit;
 }
+
+echo json_encode(["status" => true, "data" => $res->fetch_assoc()]);
 ?>
