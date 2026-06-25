@@ -59,16 +59,17 @@ if ($user) {
     // ✅ PASSWORD MATCH
     if (password_verify($password, $user['password'])) {
 
-        echo json_encode([
-            "status" => true,
-            "role"   => $user['role'],
-            "data"   => [
-                "id"         => $user['id'],
-                "name"       => $user['name'],
-                "email"      => $user['email'],
-                "company_id" => $user['company_id']
-            ]
-        ]);
+       echo json_encode([
+    "status" => true,
+    "role"   => $user['role'],
+    "data"   => [
+        "id"         => $user['id'],
+        "name"       => $user['name'],
+        "email"      => $user['email'],
+        "company_id" => $user['company_id'],
+        "admin_id"   => $user['admin_id']
+    ]
+]);
 
         exit;
     }

@@ -10,8 +10,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     exit();
 }
 
-include "../../config/db.php";
-
 $data = json_decode(file_get_contents("php://input"), true);
 
 $gstin = trim($data['gst_no'] ?? '');
@@ -24,31 +22,65 @@ if ($gstin == '') {
     exit;
 }
 
-$apiKey = "key_live_0e188acd02be48128fdc290fe337b22e";
-$apiSecret = "secret_live_e01a4f9cf5ef461ca0103a9de306b155";
+/* TEST KEY */
+$apiKey = "key_live_7157232fd01340bab4657b0bbc90dbb4";
+$apiSecret = "secret_live_aabc1f041b3b4544b99b6feab57faeae";
+
+/* STEP 1 : AUTHENTICATE */
+$curl = curl_init();
+
+curl_setopt_array($curl, [
+    CURLOPT_URL => "https://api.sandbox.co.in/authenticate",
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST => true,
+    CURLOPT_HTTPHEADER => [
+        "x-api-key: $apiKey",
+        "x-api-secret: $apiSecret",
+        "x-api-version: 1.0.0"
+    ]
+]);
+
+$authResponse = curl_exec($curl);
+
+curl_close($curl);
+
+$authData = json_decode($authResponse, true);
+
+$accessToken =
+    $authData['access_token']
+    ?? $authData['data']['access_token']
+    ?? '';
+
+if (!$accessToken) {
+
+    echo json_encode([
+        "status" => false,
+        "step" => "auth",
+        "response" => $authData
+    ]);
+
+    exit;
+}
+
+/* STEP 2 : GST SEARCH */
 
 $curl = curl_init();
 
 curl_setopt_array($curl, [
-    CURLOPT_URL => "https://api.sandbox.co.in/gst/compliance/public/gstin/" . $gstin,
+    CURLOPT_URL => "https://api.sandbox.co.in/gst/compliance/public/gstin/search",
     CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST => true,
     CURLOPT_HTTPHEADER => [
+        "authorization: $accessToken",
         "x-api-key: $apiKey",
-        "x-api-secret: $apiSecret",
-        "Accept: application/json"
-    ]
+        "Content-Type: application/json"
+    ],
+    CURLOPT_POSTFIELDS => json_encode([
+        "gstin" => $gstin
+    ])
 ]);
 
 $response = curl_exec($curl);
-
-if (curl_errno($curl)) {
-    echo json_encode([
-        "status" => false,
-        "curl_error" => curl_error($curl)
-    ]);
-    curl_close($curl);
-    exit;
-}
 
 $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
 
@@ -56,7 +88,7 @@ curl_close($curl);
 
 echo json_encode([
     "http_code" => $httpCode,
-    "api_response" => json_decode($response, true),
+    "response" => json_decode($response, true),
     "raw_response" => $response
 ]);
 
