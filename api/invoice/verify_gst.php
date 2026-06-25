@@ -86,10 +86,24 @@ $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
 
 curl_close($curl);
 
-echo json_encode([
-    "http_code" => $httpCode,
-    "response" => json_decode($response, true),
-    "raw_response" => $response
-]);
+$api = json_decode($response, true);
+
+if ($httpCode == 200 && isset($api['data'])) {
+
+    echo json_encode([
+        "status" => true,
+        "business_name" => $api['data']['business_name'] ?? "",
+        "data" => $api['data']
+    ]);
+
+} else {
+
+    echo json_encode([
+        "status" => false,
+        "message" => "Invalid GST Number",
+        "response" => $api
+    ]);
+
+}
 
 exit;

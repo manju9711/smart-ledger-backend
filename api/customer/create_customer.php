@@ -15,6 +15,7 @@ $data = json_decode(file_get_contents("php://input"), true);
 $company_id = intval($data['company_id']);
 $name = $conn->real_escape_string($data['name']);
 $phone = $conn->real_escape_string($data['phone']);
+$gst_no = strtoupper($conn->real_escape_string($data['gst_no'] ?? ''));
 $address = $conn->real_escape_string($data['address']);
 $type = $conn->real_escape_string($data['type']);
 $credit_enabled = intval($data['credit_enabled']);
@@ -27,8 +28,8 @@ if (!$name || !preg_match('/^[0-9]{10}$/', $phone)) {
 }
 
 $sql = "INSERT INTO customers 
-(company_id,name,phone,address,type,credit_enabled,credit_limit,credit_days,created_at)
-VALUES ('$company_id','$name','$phone','$address','$type','$credit_enabled','$credit_limit','$credit_days',NOW())";
+(company_id,name,phone,address,gst_no,type,credit_enabled,credit_limit,credit_days,created_at)
+VALUES ('$company_id','$name','$phone','$address','$gst_no','$type','$credit_enabled','$credit_limit','$credit_days',NOW())";
 
 echo json_encode([
     "status"=>$conn->query($sql)

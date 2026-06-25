@@ -15,6 +15,7 @@ $data = json_decode(file_get_contents("php://input"), true);
 $id = intval($data['id']);
 $name = $conn->real_escape_string($data['name']);
 $phone = $conn->real_escape_string($data['phone']);
+$gst_no = strtoupper($conn->real_escape_string($data['gst_no'] ?? ''));
 $address = $conn->real_escape_string($data['address']);
 $type = $conn->real_escape_string($data['type']);
 $credit_enabled = intval($data['credit_enabled']);
@@ -25,6 +26,7 @@ $sql = "
 UPDATE customers SET
 name='$name',
 phone='$phone',
+gst_no='$gst_no',
 address='$address',
 type='$type',
 credit_enabled='$credit_enabled',

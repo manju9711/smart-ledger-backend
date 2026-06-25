@@ -16,6 +16,9 @@ $data = json_decode(file_get_contents("php://input"), true);
 $company_id     = intval($data['company_id'] ?? 0);
 $customer_id    = intval($data['customer_id'] ?? 0);
 $customer_name  = $conn->real_escape_string($data['customer_name'] ?? '');
+if (trim($customer_name) == "") {
+    $customer_name = "Customer";
+}       
 $customer_phone = $conn->real_escape_string($data['customer_phone'] ?? '');
 $cashier_id     = intval($data['cashier_id'] ?? 0);
 $products       = $data['products'] ?? [];
@@ -33,8 +36,27 @@ $gst_no         = $conn->real_escape_string($data['gst_no'] ?? '');
 $invoice_no = "INV-" . time();
 
 /* ── VALIDATION ── */
-if (!$customer_name || !preg_match('/^[0-9]{10}$/', $customer_phone)) {
-    echo json_encode(["status" => false, "message" => "Invalid customer"]);
+// Either customer name OR phone should exist
+
+if (
+    empty($customer_name) &&
+    empty($customer_phone)
+) {
+    echo json_encode([
+        "status" => false,
+        "message" => "Customer name or phone required"
+    ]);
+    exit;
+}
+
+if (
+    !empty($customer_phone) &&
+    !preg_match('/^[0-9]{10}$/', $customer_phone)
+) {
+    echo json_encode([
+        "status" => false,
+        "message" => "Invalid phone number"
+    ]);
     exit;
 }
 if (count($products) == 0) {

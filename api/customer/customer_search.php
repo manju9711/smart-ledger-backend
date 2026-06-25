@@ -16,7 +16,7 @@ if (!$company_id || strlen($q) < 2) {
 }
 
 $result = $conn->query("
-    SELECT id, name, phone, address, type, credit_enabled, credit_limit, credit_days, loyalty_points
+    SELECT id, name, phone, address, gst_no,type, credit_enabled, credit_limit, credit_days, loyalty_points
     FROM customers
     WHERE company_id = '$company_id'
       AND is_deleted = 0
