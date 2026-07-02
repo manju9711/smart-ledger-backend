@@ -12,23 +12,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 include "../../config/db.php";
 
 $admin_id = intval($_GET['admin_id'] ?? 0);
+$role = $_GET['role'] ?? '';
 
-if (!$admin_id) {
-    echo json_encode(["status" => false, "message" => "Admin ID required"]);
+if ($role !== "superadmin" && !$admin_id) {
+    echo json_encode([
+        "status" => false,
+        "message" => "Admin ID required"
+    ]);
     exit;
 }
 
-$result = mysqli_query($conn, "
-    SELECT id, company_name
-    FROM companies
-    WHERE admin_id = '$admin_id'
-    ORDER BY company_name ASC
-");
+if ($role === "superadmin") {
 
-$data = [];
-while ($row = mysqli_fetch_assoc($result)) {
-    $data[] = $row;
+    $sql = "
+        SELECT id, company_name
+        FROM companies
+        WHERE status='active'
+        ORDER BY company_name ASC
+    ";
+
+} else {
+
+    $sql = "
+        SELECT id, company_name
+        FROM companies
+        WHERE admin_id='$admin_id'
+        AND status='active'
+        ORDER BY company_name ASC
+    ";
+
 }
 
-echo json_encode(["status" => true, "data" => $data]);
-?>
+$result = mysqli_query($conn, $sql);
+
+$data = [];
+
+while ($row = mysqli_fetch_assoc($result)) {
+
+    $data[] = $row;
+
+}
+
+echo json_encode([
+    "status" => true,
+    "data" => $data
+]);
