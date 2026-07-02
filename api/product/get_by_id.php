@@ -1,11 +1,9 @@
 <?php
-// 🔥 CORS HEADERS
 header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
-header("Access-Control-Allow-Methods: POST, OPTIONS");
+header("Access-Control-Allow-Methods: GET, OPTIONS");
 
-// 🔥 PREFLIGHT
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     http_response_code(200);
     exit();
@@ -13,48 +11,60 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 
 include __DIR__ . '/../../config/db.php';
 
-// 🔥 GET PARAM
 $id = intval($_GET['id'] ?? 0);
-$company_id = intval($_GET['company_id'] ?? 0);
-
-$result = mysqli_query($conn, "
-SELECT p.*, c.name as category_name
-FROM products p
-LEFT JOIN categories c
-ON p.category_id = c.id
-WHERE p.id='$id'
-AND p.company_id='$company_id'
-AND p.is_deleted=0
-");
 
 if (!$id) {
     echo json_encode([
-        "status"=>false,
-        "message"=>"Product ID required"
+        "status" => false,
+        "message" => "Product ID required"
     ]);
     exit;
 }
 
-// 🔥 FETCH PRODUCT
-$result = mysqli_query($conn, "
-SELECT p.*, c.name as category_name 
-FROM products p
-LEFT JOIN categories c ON p.category_id = c.id
-WHERE p.id='$id' AND p.is_deleted=0
-");
+$sql = "
+SELECT
+    p.*,
+    c.name AS category_name,
+    sc.name AS subcategory_name,
+    b.name AS brand_name
 
-$product = mysqli_fetch_assoc($result);
+FROM products p
+
+LEFT JOIN categories c
+ON p.category_id = c.id
+
+LEFT JOIN subcategories sc
+ON p.subcategory_id = sc.id
+
+LEFT JOIN brands b
+ON p.brand_id = b.id
+
+WHERE
+p.id = ?
+AND p.is_deleted = 0
+";
+
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("i", $id);
+$stmt->execute();
+
+$result = $stmt->get_result();
+$product = $result->fetch_assoc();
 
 if (!$product) {
+
     echo json_encode([
-        "status"=>false,
-        "message"=>"Product not found"
+        "status" => false,
+        "message" => "Product not found"
     ]);
+
     exit;
 }
 
 echo json_encode([
-    "status"=>true,
-    "data"=>$product
+    "status" => true,
+    "data" => $product
 ]);
-?>
+
+$stmt->close();
+$conn->close();
