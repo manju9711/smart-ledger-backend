@@ -44,14 +44,11 @@ if (!$company_name || !$company_code || !$company_address) {
     exit();
 }
 
-// GST validation
-if ($gst_type == 'with_gst') {
-    if (!$gstin || !preg_match($gstRegex, $gstin)) {
-        echo json_encode(["status"=>false,"message"=>"Invalid GSTIN"]);
-        exit();
-    }
+// GST validation — GSTIN is optional; only check format if provided
+if (!empty($gstin) && !preg_match($gstRegex, $gstin)) {
+    echo json_encode(["status"=>false,"message"=>"Invalid GSTIN"]);
+    exit();
 }
-
 // Phone validation
 if (!preg_match($phoneRegex, $phone)) {
     echo json_encode(["status"=>false,"message"=>"Phone must be 10 digits"]);

@@ -64,16 +64,14 @@ if (!$company_name || !$company_code || !$company_address) {
     exit;
 }
 
-if ($gst_type == 'with_gst') {
+// GSTIN optional — only validate format if the client actually sent one
+if (!empty($gstin) && !preg_match($gstRegex, $gstin)) {
 
-    if (!$gstin || !preg_match($gstRegex, $gstin)) {
-
-        echo json_encode([
-            "status" => false,
-            "message" => "Invalid GSTIN"
-        ]);
-        exit;
-    }
+    echo json_encode([
+        "status" => false,
+        "message" => "Invalid GSTIN"
+    ]);
+    exit;
 }
 
 if (!preg_match($phoneRegex, $phone)) {
