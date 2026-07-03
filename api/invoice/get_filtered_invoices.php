@@ -20,6 +20,7 @@ $to_date        = $data['to_date'] ?? '';
 $payment_method = $data['payment_method'] ?? 'all';
 $payment_status = $data['payment_status'] ?? 'all';
 $customer_name  = trim($data['customer_name'] ?? '');
+$brand_id = intval($data['brand_id'] ?? 0);
 
 /* ── VALIDATION ── */
 if (!$company_id) {
@@ -121,36 +122,83 @@ $total_amount_sum  = 0;
 $total_paid_sum    = 0;
 $total_pending_sum = 0;
 
+// NEW: separate totals for brand-only figures (used when brand_id is applied)
+$total_brand_amount_sum = 0;
+
 while ($row = $result->fetch_assoc()) {
 
     /* Auto Status Logic */
+    if (floatval($row['balance_amount']) == 0) {
+        $row['payment_status'] = 'paid';
 
-/* Auto Status Logic */
-if (floatval($row['balance_amount']) == 0) {
-    $row['payment_status'] = 'paid';
+    } elseif (floatval($row['paid_amount']) == 0) {
+        // Nothing paid at all
+        // Check if due_date passed → overdue, else not_paid
+        if (!empty($row['due_date']) && $row['due_date'] < date('Y-m-d')) {
+            $row['payment_status'] = 'overdue';
+        } else {
+            $row['payment_status'] = 'not_paid';
+        }
 
-} elseif (floatval($row['paid_amount']) == 0) {
-    // Nothing paid at all
-    // Check if due_date passed → overdue, else not_paid
-    if (!empty($row['due_date']) && $row['due_date'] < date('Y-m-d')) {
-        $row['payment_status'] = 'overdue';
     } else {
-        $row['payment_status'] = 'not_paid';
+        // Half paid (partial) → check due_date
+        if (!empty($row['due_date']) && $row['due_date'] < date('Y-m-d')) {
+            $row['payment_status'] = 'overdue';
+        } else {
+            $row['payment_status'] = 'pending'; // ← partial payment, not yet overdue
+        }
     }
-
-} else {
-    // Half paid (partial) → check due_date
-    if (!empty($row['due_date']) && $row['due_date'] < date('Y-m-d')) {
-        $row['payment_status'] = 'overdue';
-    } else {
-        $row['payment_status'] = 'pending'; // ← partial payment, not yet overdue
-    }
-}
 
     $row['products'] = json_decode(
         $row['products'] ?? '[]',
         true
     );
+
+    $matched = true;
+
+    // Brand-specific amount, used only for the "Brand Amount" summary
+    // card on the invoice list when a brand filter is applied.
+    $row['brand_line_amount'] = 0;
+
+    if ($brand_id > 0) {
+
+        $matched = false;
+
+        foreach ($row['products'] as $item) {
+
+            $productId = intval($item['product_id'] ?? 0);
+
+            // Support either "quantity" or "qty" and either "price" or "unit_price"
+            // depending on how the products JSON was saved for that invoice.
+            $qty   = floatval($item['quantity']   ?? $item['qty']        ?? 0);
+            $price = floatval($item['price']      ?? $item['unit_price'] ?? 0);
+
+            // Lightweight lookup — just need brand_id here.
+            $q = mysqli_query($conn,"
+                SELECT brand_id
+                FROM products
+                WHERE id='$productId'
+                LIMIT 1
+            ");
+
+            if ($q && ($p = mysqli_fetch_assoc($q))) {
+
+                if(intval($p['brand_id'] ?? 0) == $brand_id){
+
+                    $matched = true;
+                    $row['brand_line_amount'] += ($qty * $price);
+
+                }
+
+            }
+
+        }
+
+    }
+
+    if(!$matched){
+        continue;
+    }
 
     $rows[] = $row;
 
@@ -161,6 +209,8 @@ if (floatval($row['balance_amount']) == 0) {
     $total_paid_sum += floatval($row['paid_amount']);
 
     $total_pending_sum += floatval($row['balance_amount']);
+
+    $total_brand_amount_sum += floatval($row['brand_line_amount']);
 }
 
 echo json_encode([
@@ -170,7 +220,9 @@ echo json_encode([
         "total_invoices" => $total_invoices,
         "total_amount" => $total_amount_sum,
         "total_paid" => $total_paid_sum,
-        "total_pending" => $total_pending_sum
+        "total_pending" => $total_pending_sum,
+        // NEW: only meaningful when brand_id filter was applied
+        "total_brand_amount" => $total_brand_amount_sum
     ]
 ]);
 ?>
