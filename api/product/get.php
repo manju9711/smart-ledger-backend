@@ -43,7 +43,8 @@ SELECT
     b.name AS brand_name,
     comp.company_name,
     comp.gstin AS company_gstin,
-    comp.gst_type
+    comp.gst_type,
+    sup.supplier_name
 
 FROM products p
 
@@ -58,6 +59,9 @@ ON p.brand_id = b.id
 
 LEFT JOIN companies comp
 ON p.company_id = comp.id
+
+LEFT JOIN suppliers sup
+ON p.supplier_id = sup.id
 
 WHERE $where
 
