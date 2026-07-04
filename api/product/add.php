@@ -21,6 +21,7 @@ $product_code = trim($data['product_code'] ?? '');
 $category_id = intval($data['category_id'] ?? 0);
 $subcategory_id = intval($data['subcategory_id'] ?? 0);
 $brand_id = intval($data['brand_id'] ?? 0);
+$supplier_id = intval($data['supplier_id'] ?? 0);
 $price = floatval($data['price'] ?? 0);
 $stock = intval($data['stock'] ?? 0);
 $barcode = $data['barcode'] ?? '';
@@ -29,11 +30,13 @@ $gst = floatval($data['gst_percentage'] ?? 0);
 $company_id = intval($data['company_id'] ?? 0);
 
 // Validation
-if (!$name || !$category_id || !$company_id) {
-    echo json_encode(["status"=>false,"message"=>"Required fields missing"]);
+if (!$name || !$category_id || !$company_id || !$supplier_id) {
+    echo json_encode([
+        "status" => false,
+        "message" => "Required fields missing"
+    ]);
     exit;
 }
-
 // 🔥 CHECK CATEGORY EXISTS + MATCH COMPANY
 $check = mysqli_query($conn, "SELECT id FROM categories 
 WHERE id='$category_id' AND company_id='$company_id' AND is_deleted=0 AND status='active'" );
@@ -54,6 +57,7 @@ product_code,
 category_id,
 subcategory_id,
 brand_id,
+supplier_id,
 price,
 stock,
 barcode,
@@ -68,6 +72,7 @@ VALUES
 '$category_id',
 '$subcategory_id',
 '$brand_id',
+'$supplier_id',
 '$price',
 '$stock',
 '$barcode',
