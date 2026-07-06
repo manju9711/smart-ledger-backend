@@ -38,15 +38,20 @@ if (!preg_match('/^[0-9]{10}$/', $phone)) {
     exit;
 }
 
-// GST mandatory + format validation (15 alphanumeric chars)
-if (!$gst_no) {
-    echo json_encode(["status" => false, "message" => "GST number is required"]);
-    exit;
-}
-
-if (!preg_match('/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/', $gst_no)) {
-    echo json_encode(["status" => false, "message" => "Invalid GST number format"]);
-    exit;
+if ($type === 'B2B') {
+    if (!$gst_no) {
+        echo json_encode(["status" => false, "message" => "GST number is required for B2B customers"]);
+        exit;
+    }
+    if (!preg_match('/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/', $gst_no)) {
+        echo json_encode(["status" => false, "message" => "Invalid GST number format"]);
+        exit;
+    }
+} else {
+    if ($gst_no && !preg_match('/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/', $gst_no)) {
+        echo json_encode(["status" => false, "message" => "Invalid GST number format"]);
+        exit;
+    }
 }
 
 // ── INSERT ──
