@@ -108,7 +108,7 @@ foreach($products as $p){
         /(60*60*24)
     );
 
-    if($days >= 2){
+    if($days >= 30){
 
         $result[]=[
             "product_name"=>$p["product_name"],
