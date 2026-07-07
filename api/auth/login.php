@@ -42,7 +42,7 @@ if ($user) {
     if ($user['status'] != 'active') {
         echo json_encode([
             "status" => false,
-            "message" => "Your account is inactive. Contact admin."
+            "message" => "Your account is inactive. Contact super admin."
         ]);
         exit;
     }
