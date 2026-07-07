@@ -56,9 +56,17 @@ if ($gst_type == "without_gst") {
 if ($payment_type == "credit") {
     $advance_used    = 0;
     $effective_total = $total_amount;
-    $final_paid      = 0;
-    $balance_amount  = $total_amount;
-    $payment_status  = "not_paid";
+    $final_paid      = min($paid_amount, $total_amount);   // 👈 frontend-ல இருந்து வந்த paid_amount use பண்ணு
+    $balance_amount  = $total_amount - $final_paid;
+
+    if ($balance_amount <= 0) {
+        $payment_status = "paid";
+    } elseif ($final_paid > 0) {
+        $payment_status = "pending";
+    } else {
+        $payment_status = "not_paid";
+    }
+
     $advance_delta   = 0;
 } else {
     $advance_balance = 0.0;
@@ -139,6 +147,33 @@ if ($customer_id > 0) {
     }
 }
 $current_balance = $previous_balance + $balance_amount;
+
+/* ── CREDIT LIMIT CHECK ── */
+if ($payment_type == "credit" && $customer_id > 0) {
+    $cust_res = $conn->query("
+        SELECT credit_enabled, credit_limit, pending_amount
+        FROM customers WHERE id='$customer_id' LIMIT 1
+    ");
+    if ($cust_res && $cust_res->num_rows > 0) {
+        $cust = $cust_res->fetch_assoc();
+        $credit_limit = floatval($cust['credit_limit']);
+        $existing_pending = floatval($cust['pending_amount']);
+
+        if ($credit_limit > 0) {
+            $projected_total = $existing_pending + $total_amount;
+            if ($projected_total > $credit_limit) {
+                $available = max($credit_limit - $existing_pending, 0);
+                echo json_encode([
+                    "status" => false,
+                    "message" => "Credit limit reached! Available: ₹" . number_format($available, 2) .
+                                  " (Limit: ₹" . number_format($credit_limit, 2) .
+                                  ", Already pending: ₹" . number_format($existing_pending, 2) . ")"
+                ]);
+                exit;
+            }
+        }
+    }
+}
 
 /* ── INSERT INVOICE ── */
 $product_json    = $conn->real_escape_string(json_encode($products));
