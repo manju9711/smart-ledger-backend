@@ -49,22 +49,50 @@ if (mysqli_num_rows($check) == 0) {
     exit;
 }
 
+// 🔥 GET COMPANY NAME
+$companyResult = mysqli_query($conn, "SELECT company_name FROM companies WHERE id='$company_id' LIMIT 1");
 
-// 🔥 GENERATE SEQUENTIAL BARCODE (backend side)
-function generateSequentialBarcode($conn) {
-    $result = mysqli_query($conn, "SELECT barcode FROM products WHERE barcode LIKE 'PRD%' ORDER BY id DESC LIMIT 1");
-    
-    if ($row = mysqli_fetch_assoc($result)) {
-        $lastNumber = intval(substr($row['barcode'], 3)); // "PRD" remove pannitu number eduthுக்கிறோம்
-        $newNumber = $lastNumber + 1;
-    } else {
-        $newNumber = 100001; // first barcode
-    }
-
-    return "PRD" . $newNumber;
+if (!$companyResult || mysqli_num_rows($companyResult) == 0) {
+    echo json_encode([
+        "status" => false,
+        "message" => "Company not found"
+    ]);
+    exit;
 }
 
-$barcode = generateSequentialBarcode($conn);
+$companyRow = mysqli_fetch_assoc($companyResult);
+
+// Remove spaces/special chars, then take first 3 letters, uppercase
+$cleanName   = preg_replace('/[^A-Za-z0-9]/', '', $companyRow['company_name']);
+$companyCode = strtoupper(substr($cleanName, 0, 3));
+
+if (!$companyCode) {
+    $companyCode = "CMP"; // fallback if name is empty/invalid
+}
+
+// 🔥 GENERATE SEQUENTIAL BARCODE PER COMPANY
+function generateCompanyBarcode($conn, $companyCode, $company_id) {
+
+    $prefix = $companyCode;
+
+    $result = mysqli_query($conn, "
+        SELECT barcode FROM products 
+        WHERE company_id='$company_id' 
+        AND barcode LIKE '{$prefix}%' 
+        ORDER BY id DESC LIMIT 1
+    ");
+
+    if ($row = mysqli_fetch_assoc($result)) {
+        $lastNumber = intval(substr($row['barcode'], strlen($prefix)));
+        $newNumber  = $lastNumber + 1;
+    } else {
+        $newNumber = 100001;
+    }
+
+    return $prefix . $newNumber;
+}
+
+$barcode = generateCompanyBarcode($conn, $companyCode, $company_id);
 
 // Insert
 $sql = "INSERT INTO products
@@ -102,7 +130,7 @@ if ($conn->query($sql)) {
     echo json_encode([
         "status" => true,
         "message" => "Product added",
-        "barcode" => $barcode   // frontend ku return, success toast la kaata
+        "barcode" => $barcode
     ]);
 } else {
     echo json_encode(["status"=>false,"message"=>$conn->error]);
