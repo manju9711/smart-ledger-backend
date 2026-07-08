@@ -24,7 +24,6 @@ $brand_id = intval($data['brand_id'] ?? 0);
 $supplier_id = intval($data['supplier_id'] ?? 0);
 $price = floatval($data['price'] ?? 0);
 $stock = intval($data['stock'] ?? 0);
-$barcode = $data['barcode'] ?? '';
 $unit = $data['unit'] ?? 'piece';
 $gst = floatval($data['gst_percentage'] ?? 0);
 $company_id = intval($data['company_id'] ?? 0);
@@ -37,6 +36,7 @@ if (!$name || !$category_id || !$company_id || !$supplier_id) {
     ]);
     exit;
 }
+
 // 🔥 CHECK CATEGORY EXISTS + MATCH COMPANY
 $check = mysqli_query($conn, "SELECT id FROM categories 
 WHERE id='$category_id' AND company_id='$company_id' AND is_deleted=0 AND status='active'" );
@@ -48,6 +48,23 @@ if (mysqli_num_rows($check) == 0) {
     ]);
     exit;
 }
+
+
+// 🔥 GENERATE SEQUENTIAL BARCODE (backend side)
+function generateSequentialBarcode($conn) {
+    $result = mysqli_query($conn, "SELECT barcode FROM products WHERE barcode LIKE 'PRD%' ORDER BY id DESC LIMIT 1");
+    
+    if ($row = mysqli_fetch_assoc($result)) {
+        $lastNumber = intval(substr($row['barcode'], 3)); // "PRD" remove pannitu number eduthுக்கிறோம்
+        $newNumber = $lastNumber + 1;
+    } else {
+        $newNumber = 100001; // first barcode
+    }
+
+    return "PRD" . $newNumber;
+}
+
+$barcode = generateSequentialBarcode($conn);
 
 // Insert
 $sql = "INSERT INTO products
@@ -82,7 +99,11 @@ VALUES
 )";
 
 if ($conn->query($sql)) {
-    echo json_encode(["status"=>true,"message"=>"Product added"]);
+    echo json_encode([
+        "status" => true,
+        "message" => "Product added",
+        "barcode" => $barcode   // frontend ku return, success toast la kaata
+    ]);
 } else {
     echo json_encode(["status"=>false,"message"=>$conn->error]);
 }
