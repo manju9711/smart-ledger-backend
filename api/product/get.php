@@ -13,9 +13,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 include "../../config/db.php";
 
 $company_id = intval($_GET['company_id'] ?? 0);
-
-// NEW: optional brand filter. When 0 (not passed / "All Brands"),
-// every product for the company is returned — unchanged behavior.
 $brand_id = intval($_GET['brand_id'] ?? 0);
 
 if (!$company_id) {
@@ -29,7 +26,6 @@ if (!$company_id) {
 
 $where = "p.company_id = '$company_id' AND p.is_deleted = 0";
 
-// NEW: narrow to a single brand when requested
 if ($brand_id > 0) {
     $where .= " AND p.brand_id = '$brand_id'";
 }
@@ -43,8 +39,7 @@ SELECT
     b.name AS brand_name,
     comp.company_name,
     comp.gstin AS company_gstin,
-    comp.gst_type,
-    sup.supplier_name
+    comp.gst_type
 
 FROM products p
 
@@ -59,9 +54,6 @@ ON p.brand_id = b.id
 
 LEFT JOIN companies comp
 ON p.company_id = comp.id
-
-LEFT JOIN suppliers sup
-ON p.supplier_id = sup.id
 
 WHERE $where
 

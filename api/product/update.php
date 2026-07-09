@@ -1,11 +1,9 @@
 <?php
-// 🔥 CORS HEADERS
 header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 header("Access-Control-Allow-Methods: POST, OPTIONS");
 
-// 🔥 PREFLIGHT
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     http_response_code(200);
     exit();
@@ -21,7 +19,6 @@ $product_code = trim($data['product_code'] ?? '');
 $category_id = intval($data['category_id'] ?? 0);
 $subcategory_id = intval($data['subcategory_id'] ?? 0);
 $brand_id = intval($data['brand_id'] ?? 0);
-$supplier_id = intval($data['supplier_id'] ?? 0);
 $price = floatval($data['price'] ?? 0);
 $stock = intval($data['stock'] ?? 0);
 $barcode = $data['barcode'] ?? '';
@@ -34,7 +31,6 @@ if (!$id || !$name || !$category_id || !$company_id) {
     exit;
 }
 
-// 🔥 VALIDATION AGAIN
 $check = mysqli_query($conn, "SELECT id FROM categories 
 WHERE id='$category_id' AND company_id='$company_id' AND is_deleted=0");
 
@@ -49,7 +45,6 @@ product_code='$product_code',
 category_id='$category_id',
 subcategory_id='$subcategory_id',
 brand_id='$brand_id',
-supplier_id='$supplier_id',
 price='$price',
 stock='$stock',
 barcode='$barcode',

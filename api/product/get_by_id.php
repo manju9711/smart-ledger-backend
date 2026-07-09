@@ -26,8 +26,7 @@ SELECT
     p.*,
     c.name AS category_name,
     sc.name AS subcategory_name,
-    b.name AS brand_name,
-    sup.supplier_name
+    b.name AS brand_name
 
 FROM products p
 
@@ -39,9 +38,6 @@ ON p.subcategory_id = sc.id
 
 LEFT JOIN brands b
 ON p.brand_id = b.id
-
-LEFT JOIN suppliers sup
-ON p.supplier_id = sup.id
 
 WHERE
 p.id = ?
